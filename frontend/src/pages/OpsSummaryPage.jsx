@@ -27,22 +27,22 @@ const OpsSummaryPage = () => {
     return (
         <div style={{ padding: '2rem' }}>
             <h1>Operations Summary</h1>
-            <p style={{ color: '#666', marginBottom: '2rem' }}>Real-time operational insights and incident detection.</p>
+            <p style={{ color: 'var(--text-secondary)', marginBottom: '2rem' }}>Real-time operational insights and incident detection.</p>
 
             {/* Alert Counts */}
             <section style={sectionStyle}>
                 <h2>Alert Counts</h2>
                 <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
-                    <div style={cardStyle}>
-                        <div style={{ fontSize: '2rem', fontWeight: 'bold' }}>{data.totalAlerts}</div>
-                        <div style={{ color: '#666' }}>Total Alerts</div>
+                    <div style={{ padding: '1rem', backgroundColor: 'var(--bg-card)', borderRadius: '8px', minWidth: '120px', border: '1px solid var(--border-color)' }}>
+                        <div style={{ fontSize: '2rem', fontWeight: 'bold', color: 'var(--text-primary)' }}>{data.totalAlerts}</div>
+                        <div style={{ color: 'var(--text-secondary)' }}>Total Alerts</div>
                     </div>
-                    <div style={{ ...cardStyle, borderLeft: '4px solid #dc3545' }}>
-                        <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#dc3545' }}>{data.alertsBySeverity['SL-1']}</div>
+                    <div style={{ padding: '1rem', backgroundColor: 'var(--bg-card)', borderRadius: '8px', minWidth: '120px', borderLeft: '4px solid var(--severity-critical)', border: '1px solid var(--border-color)' }}>
+                        <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: 'var(--severity-critical)' }}>{data.alertsBySeverity['SL-1']}</div>
                         <div>SL-1 (Critical)</div>
                     </div>
-                    <div style={{ ...cardStyle, borderLeft: '4px solid #ffc107' }}>
-                        <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#856404' }}>{data.alertsBySeverity['SL-2']}</div>
+                    <div style={{ padding: '1rem', backgroundColor: 'var(--bg-card)', borderRadius: '8px', minWidth: '120px', borderLeft: '4px solid var(--severity-warning)', border: '1px solid var(--border-color)' }}>
+                        <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: 'var(--severity-warning-text)' }}>{data.alertsBySeverity['SL-2']}</div>
                         <div>SL-2 (Warning)</div>
                     </div>
                     <div style={{ ...cardStyle, borderLeft: '4px solid #6c757d' }}>
@@ -56,20 +56,20 @@ const OpsSummaryPage = () => {
             <section style={sectionStyle}>
                 <h2>Top Failure Reasons</h2>
                 {data.topFailureReasons.length === 0 ? (
-                    <p style={{ color: '#666', fontStyle: 'italic' }}>No failures recorded.</p>
+                    <p style={{ color: 'var(--text-secondary)', fontStyle: 'italic' }}>No failures recorded.</p>
                 ) : (
                     <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                         <thead>
-                            <tr style={{ backgroundColor: '#f0f0f0' }}>
-                                <th style={thStyle}>Reason</th>
-                                <th style={thStyle}>Count</th>
+                            <tr style={{ backgroundColor: 'var(--bg-secondary)', color: 'var(--text-primary)' }}>
+                                <th style={{ padding: '0.75rem', textAlign: 'left', borderBottom: '2px solid var(--border-color)' }}>Reason</th>
+                                <th style={{ padding: '0.75rem', textAlign: 'left', borderBottom: '2px solid var(--border-color)' }}>Count</th>
                             </tr>
                         </thead>
                         <tbody>
                             {data.topFailureReasons.map((item, idx) => (
-                                <tr key={idx} style={{ borderBottom: '1px solid #ddd' }}>
-                                    <td style={tdStyle}>{item.reason}</td>
-                                    <td style={tdStyle}>{item.count}</td>
+                                <tr key={idx} style={{ borderBottom: '1px solid var(--border-color)', color: 'var(--text-primary)' }}>
+                                    <td style={{ padding: '0.75rem', textAlign: 'left' }}>{item.reason}</td>
+                                    <td style={{ padding: '0.75rem', textAlign: 'left' }}>{item.count}</td>
                                 </tr>
                             ))}
                         </tbody>
@@ -80,22 +80,22 @@ const OpsSummaryPage = () => {
             {/* Incident Candidates */}
             <section style={sectionStyle}>
                 <h2>Incident Candidates</h2>
-                <p style={{ fontSize: '0.9rem', color: '#666', marginBottom: '1rem' }}>
+                <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', marginBottom: '1rem' }}>
                     Patterns occurring 3+ times within 10 minutes.
                 </p>
                 {data.incidentCandidates.length === 0 ? (
-                    <p style={{ color: '#28a745', fontStyle: 'italic' }}>✓ No incidents detected.</p>
+                    <p style={{ color: 'var(--severity-success)', fontStyle: 'italic' }}>✓ No incidents detected.</p>
                 ) : (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                         {data.incidentCandidates.map((incident, idx) => (
-                            <div key={idx} style={{ ...cardStyle, borderLeft: '4px solid #dc3545', backgroundColor: '#fff5f5' }}>
-                                <div style={{ fontWeight: 'bold', marginBottom: '0.5rem' }}>{incident.reason}</div>
-                                <div style={{ fontSize: '0.9rem', color: '#666' }}>
+                            <div key={idx} style={{ padding: '1rem', backgroundColor: 'var(--severity-critical-bg)', borderRadius: '8px', minWidth: '120px', borderLeft: '4px solid var(--severity-critical)', border: '1px solid var(--border-color)' }}>
+                                <div style={{ fontWeight: 'bold', marginBottom: '0.5rem', color: 'var(--text-primary)' }}>{incident.reason}</div>
+                                <div style={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}>
                                     <span style={{ marginRight: '1rem' }}>Count: <strong>{incident.count}</strong></span>
                                     <span>Window: {incident.timeWindowMinutes} min</span>
                                 </div>
                                 {incident.affectedTrucks?.length > 0 && (
-                                    <div style={{ fontSize: '0.85rem', marginTop: '0.5rem', color: '#555' }}>
+                                    <div style={{ fontSize: '0.85rem', marginTop: '0.5rem', color: 'var(--text-secondary)' }}>
                                         Affected Trucks: {incident.affectedTrucks.join(', ')}
                                     </div>
                                 )}

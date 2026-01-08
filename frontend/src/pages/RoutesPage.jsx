@@ -47,7 +47,7 @@ const RoutesPage = () => {
             const payload = {
                 ...formData,
                 stops: formData.stops.split(',').map(s => s.trim()),
-                capacityLimit: Number(formData.capacityLimit)
+                capacityLimit: typeof formData.capacityLimit === 'string' ? parseFloat(formData.capacityLimit.replace(/kg/gi, '').trim()) : Number(formData.capacityLimit)
             };
             await axios.post(`${API_BASE_URL}/routes`, payload);
             setFormData({ routeID: '', stops: '', capacityLimit: '' });

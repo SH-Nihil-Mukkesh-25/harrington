@@ -49,7 +49,7 @@ async function testPriority() {
     const pHigh = parcels.data.find(p => p.parcelID === 'P-HIGH');
     const pLow = parcels.data.find(p => p.parcelID === 'P-LOW');
 
-    if (pHigh.assignedTruckId === 'T-PRIO' && !pLow.assignedTruckId) {
+    if (pHigh.assignedTruckID === 'T-PRIO' && !pLow.assignedTruckID) {
         log('✅ PASS: High priority assigned, Low skipped due to capacity.');
     } else {
         log('❌ FAIL: Priority logic failed.');

@@ -62,9 +62,9 @@ body {
 }
 
 #root {
-  max-width: 1400px;
-  margin: 0 auto;
-  padding: 0;
+  /* Full width for landing/login pages, Layout component handles max-width for dashboard */
+  width: 100%;
+  min-height: 100vh;
 }
 
 /* Global Typography */

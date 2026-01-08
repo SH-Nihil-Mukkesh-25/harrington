@@ -123,8 +123,8 @@ const DashboardPage = () => {
                 <Link to="/assignments" style={{
                     padding: '1rem 2rem',
                     borderRadius: '4px',
-                    background: '#007bff',
-                    color: 'white',
+                    background: 'var(--primary-color)',
+                    color: '#fff',
                     textDecoration: 'none',
                     fontWeight: 'bold'
                 }}>
@@ -150,8 +150,8 @@ const DashboardPage = () => {
                             style={{
                                 padding: '0.5rem 1rem',
                                 borderRadius: '4px',
-                                background: '#dc3545',
-                                color: 'white',
+                                background: 'var(--severity-critical)',
+                                color: '#fff',
                                 border: 'none',
                                 cursor: 'pointer',
                                 fontWeight: 'bold'
@@ -164,8 +164,8 @@ const DashboardPage = () => {
                             style={{
                                 padding: '0.5rem 1rem',
                                 borderRadius: '4px',
-                                background: '#6c757d',
-                                color: 'white',
+                                background: 'var(--text-secondary)',
+                                color: '#fff',
                                 border: 'none',
                                 cursor: 'pointer'
                             }}
@@ -179,8 +179,8 @@ const DashboardPage = () => {
                         style={{
                             padding: '0.75rem 1.5rem',
                             borderRadius: '4px',
-                            background: '#dc3545',
-                            color: 'white',
+                            background: 'var(--severity-critical)',
+                            color: '#fff',
                             border: 'none',
                             cursor: 'pointer',
                             fontWeight: 'bold'

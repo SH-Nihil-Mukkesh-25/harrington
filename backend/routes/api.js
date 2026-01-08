@@ -35,34 +35,51 @@ router.get('/ai/status', (req, res) => {
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 
 const SYSTEM_PROMPT = `You are Zudu, an AI logistics assistant for TMMR (Truck, Map, Monitoring & Routing).
-You help operations managers with FULL logistics operations:
+You have FULL CONTROL over the logistics system. You can CREATE, READ, UPDATE, and DELETE any resource.
 
-AVAILABLE TOOLS (use these to take actions):
+PERSONALITY:
+- Be proactive and action-oriented
+- Use intelligent defaults (generate IDs like P-001, T-001 if not provided)
+- Execute actions immediately when intent is clear
+- Confirm destructive actions (delete) before executing
 
-1. QUERY TOOLS:
-   - getSystemStatus: Overview of routes, trucks, alerts
-   - getAlerts: List all active alerts
-   - listRoutes: List all routes
-   - listTrucks: List all trucks
-   - listParcels: List all parcels
+CONTEXT AWARENESS:
+You may receive 'Screen Context' JSON containing:
+- selectedParcel: Currently selected parcel
+- compatibleRoutes: Valid routes for destination
+- compatibleTrucks: Valid trucks for selected route
 
-2. CREATE TOOLS:
-   - createParcel(parcelID, destination, weight): Create a new parcel
-   - createTruck(truckID, routeID, maxCapacity): Create a new truck
-   - createRoute(routeID, stops, capacityLimit): Create a new route (stops is comma-separated)
+TOOL REFERENCE (use exact format, replace example values):
 
-3. ACTION TOOLS:
-   - assignParcel(parcelID, truckID): Assign a parcel to a truck
+📊 QUERY (Read):
+[TOOL:getSystemStatus]
+[TOOL:getAlerts]
+[TOOL:listRoutes]
+[TOOL:listTrucks]
+[TOOL:listParcels]
+
+➕ CREATE:
+[TOOL:createParcel:P-001:DELHI:15]       → Parcel P-001 to DELHI, 15kg
+[TOOL:createTruck:T-001:R-NORTH:100]     → Truck T-001 on R-NORTH, 100kg cap
+[TOOL:createRoute:R-EAST:KOLKATA,PATNA:80] → Route R-EAST with stops
+
+🔄 ACTION:
+[TOOL:assignParcel:P-001:T-001]          → Assign parcel to truck
+
+🗑️ DELETE:
+[TOOL:deleteParcel:P-001]                → Remove parcel P-001
+[TOOL:deleteTruck:T-001]                 → Remove truck T-001
+[TOOL:deleteRoute:R-EAST]                → Remove route R-EAST
 
 RULES:
-- Be concise and professional
-- When user wants to create something, extract the details and use the appropriate tool
-- If information is missing, ask for it
-- Always confirm actions before executing
-- If asked about non-logistics topics, politely redirect`;
+1. ALWAYS use actual values from conversation, never "parcelID" or "weight" literally
+2. Generate IDs if user doesn't provide them (P-Gen-001, T-Gen-001)
+3. For parcels: destination should be UPPERCASE city name
+4. For delete requests: confirm the ID you will delete
+5. If something doesn't exist, offer to create it`;
 
 router.post('/ai/agent', async (req, res) => {
-    const { message, history } = req.body;
+    const { message, history, screenContext } = req.body;
 
     if (!message) {
         return res.status(400).json({ error: 'Message is required' });
@@ -85,23 +102,15 @@ router.post('/ai/agent', async (req, res) => {
 
         const prompt = `${SYSTEM_PROMPT}
 
+Screen Context (Current UI State):
+${screenContext ? JSON.stringify(screenContext, null, 2) : 'None'}
+
 Recent conversation:
 ${contextMessages}
 
 User: ${message}
 
-Respond naturally. To execute tools, include them in your response using this format:
-- [TOOL:getSystemStatus]
-- [TOOL:getAlerts]
-- [TOOL:listRoutes]
-- [TOOL:listTrucks]
-- [TOOL:listParcels]
-- [TOOL:createParcel:parcelID:destination:weight]
-- [TOOL:createTruck:truckID:routeID:maxCapacity]
-- [TOOL:createRoute:routeID:stops:capacityLimit]
-- [TOOL:assignParcel:parcelID:truckID]
-
-Your response:`;
+Respond concisely. Include tool calls using [TOOL:...] format when taking action.`;
 
         const result = await model.generateContent(prompt);
         const responseText = result.response.text();
@@ -114,6 +123,7 @@ Your response:`;
             const [, toolName, arg1, arg2, arg3, arg4] = match;
             
             switch (toolName) {
+                // Query tools
                 case 'getSystemStatus':
                 case 'getAlerts':
                 case 'listRoutes':
@@ -121,24 +131,45 @@ Your response:`;
                 case 'listParcels':
                     toolCalls.push({ name: toolName, args: {} });
                     break;
+                
+                // Create tools
                 case 'createParcel':
                     if (arg1 && arg2 && arg3) {
-                        toolCalls.push({ name: 'createParcel', args: { parcelID: arg1, destination: arg2, weight: arg3 } });
+                        toolCalls.push({ name: 'createParcel', args: { parcelID: arg1.trim(), destination: arg2.trim(), weight: arg3.trim() } });
                     }
                     break;
                 case 'createTruck':
                     if (arg1 && arg2 && arg3) {
-                        toolCalls.push({ name: 'createTruck', args: { truckID: arg1, routeID: arg2, maxCapacity: arg3 } });
+                        toolCalls.push({ name: 'createTruck', args: { truckID: arg1.trim(), routeID: arg2.trim(), maxCapacity: arg3.trim() } });
                     }
                     break;
                 case 'createRoute':
                     if (arg1 && arg2 && arg3) {
-                        toolCalls.push({ name: 'createRoute', args: { routeID: arg1, stops: arg2, capacityLimit: arg3 } });
+                        toolCalls.push({ name: 'createRoute', args: { routeID: arg1.trim(), stops: arg2.trim(), capacityLimit: arg3.trim() } });
                     }
                     break;
+                
+                // Action tools
                 case 'assignParcel':
                     if (arg1 && arg2) {
-                        toolCalls.push({ name: 'assignParcel', args: { parcelID: arg1, truckID: arg2 } });
+                        toolCalls.push({ name: 'assignParcel', args: { parcelID: arg1.trim(), truckID: arg2.trim() } });
+                    }
+                    break;
+                
+                // Delete tools
+                case 'deleteParcel':
+                    if (arg1) {
+                        toolCalls.push({ name: 'deleteParcel', args: { parcelID: arg1.trim() } });
+                    }
+                    break;
+                case 'deleteTruck':
+                    if (arg1) {
+                        toolCalls.push({ name: 'deleteTruck', args: { truckID: arg1.trim() } });
+                    }
+                    break;
+                case 'deleteRoute':
+                    if (arg1) {
+                        toolCalls.push({ name: 'deleteRoute', args: { routeID: arg1.trim() } });
                     }
                     break;
             }
@@ -163,7 +194,7 @@ Your response:`;
 
 // ... (Debug Log omitted, lines 27-31 same)
 // --- Debug Logging ---
-console.log("Loading API Routes...");
+
 
 router.get('/', (req, res) => {
     res.send('API Root');
@@ -248,7 +279,7 @@ router.get('/routes', (req, res) => {
 
     const result = limit === 1000 ? routes : routes.slice(startIndex, endIndex); // Optimized for default
 
-    console.log("GET /routes hit");
+
     res.json(result);
 });
 
@@ -324,7 +355,9 @@ router.post('/trucks', (req, res) => {
         return res.status(400).json({ error: 'routeID is required and must be a non-empty string' });
     }
     
-    const maxCap = Number(newTruck.maxCapacity);
+    // Robust capacity parsing: strip 'kg', spaces, and extract number
+    const maxCapStr = String(newTruck.maxCapacity || '').replace(/kg/gi, '').trim();
+    const maxCap = parseFloat(maxCapStr);
     if (isNaN(maxCap) || maxCap <= 0) {
         return res.status(400).json({ error: 'Truck maxCapacity must be a positive number' });
     }
@@ -401,7 +434,9 @@ router.post('/parcels', (req, res) => {
         return res.status(400).json({ error: 'destination is required and must be a non-empty string' });
     }
     
-    const weight = Number(newParcel.weight);
+    // Robust weight parsing: strip 'kg', spaces, and extract number
+    const weightStr = String(newParcel.weight || '').replace(/kg/gi, '').trim();
+    const weight = parseFloat(weightStr);
     if (isNaN(weight) || weight <= 0) {
         return res.status(400).json({ error: 'weight must be a positive number' });
     }
@@ -424,9 +459,9 @@ router.delete('/parcels/:parcelID', (req, res) => {
     }
     
     // Check if parcel is already assigned
-    if (parcels[index].assignedTruckId) {
+    if (parcels[index].assignedTruckID) {
         return res.status(400).json({ 
-            error: `Cannot delete parcel '${parcelID}': It is currently assigned to truck '${parcels[index].assignedTruckId}'` 
+            error: `Cannot delete parcel '${parcelID}': It is currently assigned to truck '${parcels[index].assignedTruckID}'` 
         });
     }
     
@@ -461,10 +496,10 @@ const step1_validateExistence = (parcelID, truckID) => {
 
 // Step 2: Check if parcel is already assigned (uniqueness)
 const step2_checkUniqueness = (parcel, truckID) => {
-    if (parcel.assignedTruckId) {
+    if (parcel.assignedTruckID) {
         return { 
             success: false, 
-            reason: `Parcel already assigned to truck ${parcel.assignedTruckId}`,
+            reason: `Parcel already assigned to truck ${parcel.assignedTruckID}`,
             code: 400,
             severity: 'SL-1'
         };
@@ -499,7 +534,7 @@ const step3_checkDestination = (parcel, truck) => {
 // Step 4: Check capacity
 const step4_checkCapacity = (parcel, truck) => {
     const currentLoad = parcels
-        .filter(p => p.assignedTruckId === truck.truckID)
+        .filter(p => p.assignedTruckID === truck.truckID)
         .reduce((sum, p) => sum + (Number(p.weight) || 0), 0);
 
     if (currentLoad + (Number(parcel.weight) || 0) > truck.maxCapacity) {
@@ -510,7 +545,7 @@ const step4_checkCapacity = (parcel, truck) => {
 
 // Step 5: Commit assignment
 const step5_commitAssignment = (parcel, truck) => {
-    parcel.assignedTruckId = truck.truckID;
+    parcel.assignedTruckID = truck.truckID;
     return { success: true };
 };
 

@@ -46,7 +46,7 @@ const ParcelsPage = () => {
         try {
             const payload = {
                 ...formData,
-                weight: Number(formData.weight)
+                weight: typeof formData.weight === 'string' ? parseFloat(formData.weight.replace(/kg/gi, '').trim()) : Number(formData.weight)
             };
             await axios.post(`${API_BASE_URL}/parcels`, payload);
             setFormData({ parcelID: '', destination: '', weight: '' });
@@ -119,7 +119,7 @@ const ParcelsPage = () => {
                     />
                     <button
                         type="submit"
-                        disabled={submitting || !formData.parcelID || !formData.destination || !formData.weight || Number(formData.weight) <= 0}
+                        disabled={submitting || !formData.parcelID || !formData.destination || !formData.weight}
                         style={{ opacity: submitting ? 0.7 : 1, cursor: submitting ? 'not-allowed' : 'pointer' }}
                     >
                         {submitting ? 'Adding...' : 'Add Parcel'}
@@ -145,9 +145,9 @@ const ParcelsPage = () => {
                                 <td>{p.parcelID}</td>
                                 <td>{p.destination}</td>
                                 <td>{p.weight}</td>
-                                <td>{p.assignedTruckId || '-'}</td>
+                                <td>{p.assignedTruckID || '-'}</td>
                                 <td>
-                                    {p.assignedTruckId ? (
+                                    {p.assignedTruckID ? (
                                         <span style={{ color: '#999', fontSize: '0.9rem' }}>Assigned</span>
                                     ) : deleteConfirm === p.parcelID ? (
                                         <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>

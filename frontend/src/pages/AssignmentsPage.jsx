@@ -59,8 +59,8 @@ const AssignmentsPage = () => {
         }
     };
 
-    const assignedParcels = parcels.filter(p => p.assignedTruckId);
-    const availableParcels = parcels.filter(p => !p.assignedTruckId);
+    const assignedParcels = parcels.filter(p => p.assignedTruckID);
+    const availableParcels = parcels.filter(p => !p.assignedTruckID);
 
     // ... (render logic)
 
@@ -119,7 +119,7 @@ const AssignmentsPage = () => {
                         // Wait, user wants INLINE HINTS.
                         // Let's calculate current load locally for best UX.
                         const currentLoad = assignedParcels
-                            .filter(p => p.assignedTruckId === truck.truckID)
+                            .filter(p => p.assignedTruckID === truck.truckID)
                             .reduce((sum, p) => sum + (p.weight || 0), 0);
 
                         const newLoad = currentLoad + (parcel.weight || 0);
@@ -179,7 +179,7 @@ const AssignmentsPage = () => {
                                 <td>{p.parcelID}</td>
                                 <td>{p.destination}</td>
                                 <td>{p.weight}</td>
-                                <td>{p.assignedTruckId}</td>
+                                <td>{p.assignedTruckID}</td>
                             </tr>
                         ))}
                         {assignedParcels.length === 0 && (

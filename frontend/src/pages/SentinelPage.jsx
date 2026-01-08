@@ -6,11 +6,11 @@ const SentinelPage = () => {
     const [proposals, setProposals] = useState([]);
     const [loading, setLoading] = useState(false);
     const [message, setMessage] = useState('');
-    
+
     // Resiliency State
     const [roadFrom, setRoadFrom] = useState('');
     const [roadTo, setRoadTo] = useState('');
-    
+
     const scanOptimizations = async () => {
         setLoading(true);
         try {
@@ -27,7 +27,7 @@ const SentinelPage = () => {
     const executeBatch = async () => {
         if (proposals.length === 0) return;
         setLoading(true);
-        
+
         // Prepare Payload: Flatten proposals into assignments
         const assignments = [];
         proposals.forEach(prop => {
@@ -78,12 +78,14 @@ const SentinelPage = () => {
 
     return (
         <div style={{ padding: '20px', maxWidth: '1200px', margin: '0 auto' }}>
-            <h1 style={{ borderBottom: '2px solid #333', paddingBottom: '10px' }}>🛡️ Sentinel Automation Engine</h1>
-            
+            <h1 style={{ borderBottom: '2px solid var(--border-color)', paddingBottom: '10px' }}>🛡️ Sentinel Automation Engine</h1>
+
             {message && (
-                <div style={{ 
-                    padding: '10px', 
-                    background: message.includes('Error') || message.includes('CONFLICT') ? '#ffebee' : '#e8f5e9',
+                <div style={{
+                    padding: '10px',
+                    background: message.includes('Error') || message.includes('CONFLICT') ? 'var(--severity-critical-bg)' : 'var(--severity-success-bg)',
+                    color: 'var(--text-primary)',
+                    border: '1px solid var(--border-color)',
                     marginBottom: '20px',
                     borderRadius: '4px'
                 }}>
@@ -92,23 +94,23 @@ const SentinelPage = () => {
             )}
 
             <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '20px' }}>
-                
+
                 {/* Panel 1: Auto-Mule Optimizer */}
-                <div style={{ background: '#fff', padding: '20px', borderRadius: '8px', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }}>
-                    <h2>🚀 Auto-Mule Optimizer</h2>
-                    <p style={{ color: '#666' }}>
+                <div style={{ background: 'var(--bg-card)', padding: '20px', borderRadius: '8px', boxShadow: 'var(--shadow-sm)', border: '1px solid var(--border-color)' }}>
+                    <h2 style={{ color: 'var(--text-primary)' }}>🚀 Auto-Mule Optimizer</h2>
+                    <p style={{ color: 'var(--text-secondary)' }}>
                         Scans pending parcels, identifies spatial clusters, and matches them to available trucks using cost-aware Dijkstra routing.
                     </p>
-                    
+
                     <div style={{ marginTop: '20px', marginBottom: '20px' }}>
-                        <button 
-                            onClick={scanOptimizations} 
+                        <button
+                            onClick={scanOptimizations}
                             disabled={loading}
-                            style={{ 
-                                padding: '10px 20px', 
-                                background: '#007bff', 
-                                color: 'white', 
-                                border: 'none', 
+                            style={{
+                                padding: '10px 20px',
+                                background: '#007bff',
+                                color: 'white',
+                                border: 'none',
                                 borderRadius: '4px',
                                 marginRight: '10px',
                                 cursor: loading ? 'not-allowed' : 'pointer'
@@ -117,14 +119,14 @@ const SentinelPage = () => {
                             {loading ? 'Processing...' : '🔍 Scan for Optimizations'}
                         </button>
 
-                        <button 
-                            onClick={executeBatch} 
+                        <button
+                            onClick={executeBatch}
                             disabled={loading || proposals.length === 0}
-                            style={{ 
-                                padding: '10px 20px', 
-                                background: proposals.length > 0 ? '#28a745' : '#ccc', 
-                                color: 'white', 
-                                border: 'none', 
+                            style={{
+                                padding: '10px 20px',
+                                background: proposals.length > 0 ? '#28a745' : 'var(--border-color)',
+                                color: 'white',
+                                border: 'none',
                                 borderRadius: '4px',
                                 cursor: proposals.length > 0 ? 'pointer' : 'not-allowed'
                             }}
@@ -136,35 +138,35 @@ const SentinelPage = () => {
                     {proposals.length > 0 ? (
                         <div style={{ display: 'grid', gap: '10px' }}>
                             {proposals.map((prop, idx) => (
-                                <div key={idx} style={{ border: '1px solid #ddd', padding: '10px', borderRadius: '4px' }}>
-                                    <div style={{ fontWeight: 'bold', color: '#333' }}>
-                                        {prop.destination} Cluster 
-                                        <span style={{ fontSize: '0.8em', background: '#e3f2fd', padding: '2px 6px', borderRadius: '10px', marginLeft: '10px' }}>
+                                <div key={idx} style={{ border: '1px solid var(--border-color)', padding: '10px', borderRadius: '4px' }}>
+                                    <div style={{ fontWeight: 'bold', color: 'var(--text-primary)' }}>
+                                        {prop.destination} Cluster
+                                        <span style={{ fontSize: '0.8em', background: 'var(--severity-info-bg)', color: 'var(--severity-info)', padding: '2px 6px', borderRadius: '10px', marginLeft: '10px' }}>
                                             {prop.type}
                                         </span>
                                     </div>
-                                    <div style={{ fontSize: '0.9em', color: '#555', marginTop: '5px' }}>
+                                    <div style={{ fontSize: '0.9em', color: 'var(--text-secondary)', marginTop: '5px' }}>
                                         📦 {prop.parcelCount} Parcels | ⚖️ {prop.totalWeight}kg | 🚛 Truck: {prop.proposedTruck || 'None'}
                                     </div>
-                                    <div style={{ fontSize: '0.9em', color: 'green', marginTop: '5px' }}>
+                                    <div style={{ fontSize: '0.9em', color: 'var(--severity-success)', marginTop: '5px' }}>
                                         💰 Savings: {prop.savings}
                                     </div>
                                 </div>
                             ))}
                         </div>
                     ) : (
-                        <div style={{ fontStyle: 'italic', color: '#999' }}>No active proposals. Scan to begin.</div>
+                        <div style={{ fontStyle: 'italic', color: 'var(--text-secondary)' }}>No active proposals. Scan to begin.</div>
                     )}
                 </div>
 
                 {/* Panel 2: Dynamic Resiliency */}
-                <div style={{ background: '#fff', padding: '20px', borderRadius: '8px', boxShadow: '0 2px 4px rgba(0,0,0,0.1)', alignSelf: 'start' }}>
-                    <h2>🚧 Network Resiliency</h2>
-                    <p style={{ color: '#666' }}>Simulate road closures to trigger dynamic re-routing.</p>
-                    
+                <div style={{ background: 'var(--bg-card)', padding: '20px', borderRadius: '8px', boxShadow: 'var(--shadow-sm)', border: '1px solid var(--border-color)', alignSelf: 'start' }}>
+                    <h2 style={{ color: 'var(--text-primary)' }}>🚧 Network Resiliency</h2>
+                    <p style={{ color: 'var(--text-secondary)' }}>Simulate road closures to trigger dynamic re-routing.</p>
+
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '15px' }}>
-                        <select 
-                            value={roadFrom} 
+                        <select
+                            value={roadFrom}
                             onChange={e => setRoadFrom(e.target.value)}
                             style={{ padding: '8px' }}
                         >
@@ -178,9 +180,9 @@ const SentinelPage = () => {
                             <option value="Tirunelveli">Tirunelveli</option>
                             <option value="Erode">Erode</option>
                         </select>
-                        
-                        <select 
-                            value={roadTo} 
+
+                        <select
+                            value={roadTo}
                             onChange={e => setRoadTo(e.target.value)}
                             style={{ padding: '8px' }}
                         >
@@ -196,13 +198,13 @@ const SentinelPage = () => {
                         </select>
 
                         <div style={{ display: 'flex', gap: '10px', marginTop: '10px' }}>
-                            <button 
+                            <button
                                 onClick={() => toggleRoad(true)}
                                 style={{ flex: 1, padding: '8px', background: '#dc3545', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}
                             >
                                 ⛔ Close Road
                             </button>
-                            <button 
+                            <button
                                 onClick={() => toggleRoad(false)}
                                 style={{ flex: 1, padding: '8px', background: '#28a745', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}
                             >

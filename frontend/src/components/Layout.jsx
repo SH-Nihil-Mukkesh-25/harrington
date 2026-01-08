@@ -3,7 +3,7 @@ import { NavLink, Outlet } from 'react-router-dom';
 import axios from 'axios';
 import { API_BASE_URL } from '../api/config';
 
-const Layout = () => {
+const Layout = ({ user, onLogout }) => {
     const [darkMode, setDarkMode] = useState(() => {
         const saved = localStorage.getItem('tmmr-theme');
         return saved === 'dark';
@@ -81,18 +81,17 @@ const Layout = () => {
 
                 {/* Navigation Links - Anchored Left */}
                 <ul style={ulStyle}>
-                    <li><NavLink to="/" style={getLinkStyle}>Dashboard</NavLink></li>
-                    <li><NavLink to="/routes" style={getLinkStyle}>Routes</NavLink></li>
-                    <li><NavLink to="/trucks" style={getLinkStyle}>Trucks</NavLink></li>
-                    <li><NavLink to="/parcels" style={getLinkStyle}>Parcels</NavLink></li>
-                    <li><NavLink to="/assignments" style={getLinkStyle}>Assignments</NavLink></li>
-                    <li><NavLink to="/map" style={getLinkStyle}>🗺️ Map</NavLink></li>
-                    <li><NavLink to="/alerts" style={getLinkStyle}>Alerts</NavLink></li>
-                    <li><NavLink to="/workflows" style={getLinkStyle}>🧩 Workflows</NavLink></li>
-                    <li><NavLink to="/ops" style={getLinkStyle}>📊 Ops</NavLink></li>
+                    <li><NavLink to="/dashboard" end style={getLinkStyle}>Dashboard</NavLink></li>
+                    <li><NavLink to="/dashboard/operations" style={getLinkStyle}>Operations</NavLink></li>
+                    <li><NavLink to="/dashboard/assignments" style={getLinkStyle}>Assignments</NavLink></li>
+                    <li><NavLink to="/dashboard/map" style={getLinkStyle}>🗺️ Map</NavLink></li>
+                    <li><NavLink to="/dashboard/alerts" style={getLinkStyle}>Alerts</NavLink></li>
+                    <li><NavLink to="/dashboard/workflows" style={getLinkStyle}>🧩 Workflows</NavLink></li>
+                    <li><NavLink to="/dashboard/ops" style={getLinkStyle}>📊 Ops</NavLink></li>
+                    <li><NavLink to="/dashboard/settings" style={getLinkStyle}>⚙️ Settings</NavLink></li>
                     <li>
                         <NavLink
-                            to="/assistant"
+                            to="/dashboard/assistant"
                             style={({ isActive }) => ({
                                 ...getLinkStyle({ isActive }),
                                 borderLeft: '1px solid var(--border-color)',
@@ -105,28 +104,54 @@ const Layout = () => {
                     </li>
                     <li>
                         <NavLink
-                            to="/sentinel"
+                            to="/dashboard/sentinel"
                             style={({ isActive }) => ({
                                 ...getLinkStyle({ isActive }),
-                                color: isActive ? '#dc3545' : '#dc3545', // Red for Sentinel
-                                fontWeight: 'bold'
+                                borderBottom: isActive ? '2px solid #007bff' : '2px solid transparent'
                             })}
                         >
-                            🛡️ Sentinel Config
+                            🛡️ Sentinel
                         </NavLink>
                     </li>
                 </ul>
 
-                {/* Dark Mode Toggle - Pushed Right */}
-                <button
-                    onClick={() => setDarkMode(!darkMode)}
-                    style={toggleStyle}
-                    title={darkMode ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
-                >
-                    {darkMode ? '☀️' : '🌙'}
-                </button>
+                {/* User Info & Actions */}
+                <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                    {user && (
+                        <span style={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}>
+                            👤 {user.username}
+                        </span>
+                    )}
+                    <button
+                        onClick={() => setDarkMode(!darkMode)}
+                        style={{ ...toggleStyle, marginLeft: 0 }}
+                        title={darkMode ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
+                    >
+                        {darkMode ? '☀️' : '🌙'}
+                    </button>
+                    {onLogout && (
+                        <button
+                            onClick={onLogout}
+                            style={{
+                                padding: '0.5rem 1rem',
+                                fontSize: '0.85rem',
+                                backgroundColor: '#dc2626',
+                                color: '#fff',
+                                border: 'none',
+                                borderRadius: '6px',
+                                cursor: 'pointer'
+                            }}
+                        >
+                            Logout
+                        </button>
+                    )}
+                </div>
             </nav>
-            <main style={{ padding: '0 2rem' }}>
+            <main style={{
+                padding: '0 2rem',
+                maxWidth: '1400px',
+                margin: '0 auto'
+            }}>
                 <Outlet />
             </main>
 

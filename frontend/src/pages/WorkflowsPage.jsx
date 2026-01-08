@@ -49,7 +49,7 @@ const WorkflowsPage = () => {
     return (
         <div style={{ padding: '2rem' }}>
             <h1>Assignment Workflows</h1>
-            <p style={{ color: '#666', marginBottom: '1.5rem' }}>
+            <p style={{ color: 'var(--text-secondary)', marginBottom: '1.5rem' }}>
                 Inspect assignment workflow executions and their step-by-step status.
             </p>
 
@@ -57,9 +57,9 @@ const WorkflowsPage = () => {
                 <div style={{
                     padding: '3rem',
                     textAlign: 'center',
-                    backgroundColor: '#f8f9fa',
+                    backgroundColor: 'var(--bg-secondary)',
                     borderRadius: '8px',
-                    color: '#666'
+                    color: 'var(--text-secondary)'
                 }}>
                     <p style={{ fontSize: '1.2rem' }}>No workflows executed yet.</p>
                     <p>Assign parcels to trucks to see execution logs here.</p>
@@ -67,12 +67,12 @@ const WorkflowsPage = () => {
             ) : (
                 <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                     <thead>
-                        <tr style={{ backgroundColor: '#f0f0f0' }}>
-                            <th style={thStyle}>Workflow ID</th>
-                            <th style={thStyle}>Parcel ID</th>
-                            <th style={thStyle}>Truck ID</th>
-                            <th style={thStyle}>Status</th>
-                            <th style={thStyle}>Timestamp</th>
+                        <tr style={{ backgroundColor: 'var(--bg-secondary)', color: 'var(--text-primary)' }}>
+                            <th style={{ padding: '0.75rem', textAlign: 'left', borderBottom: '2px solid var(--border-color)' }}>Workflow ID</th>
+                            <th style={{ padding: '0.75rem', textAlign: 'left', borderBottom: '2px solid var(--border-color)' }}>Parcel ID</th>
+                            <th style={{ padding: '0.75rem', textAlign: 'left', borderBottom: '2px solid var(--border-color)' }}>Truck ID</th>
+                            <th style={{ padding: '0.75rem', textAlign: 'left', borderBottom: '2px solid var(--border-color)' }}>Status</th>
+                            <th style={{ padding: '0.75rem', textAlign: 'left', borderBottom: '2px solid var(--border-color)' }}>Timestamp</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -82,43 +82,44 @@ const WorkflowsPage = () => {
                                     onClick={() => toggleRow(w.workflowId)}
                                     style={{
                                         cursor: 'pointer',
-                                        borderBottom: '1px solid #ddd',
-                                        backgroundColor: expandedRow === w.workflowId ? '#f8f9fa' : '#fff'
+                                        borderBottom: '1px solid var(--border-color)',
+                                        backgroundColor: expandedRow === w.workflowId ? 'var(--bg-secondary)' : 'var(--bg-card)',
+                                        color: 'var(--text-primary)'
                                     }}
                                 >
-                                    <td style={tdStyle}><code>{w.workflowId}</code></td>
-                                    <td style={tdStyle}>{w.parcelID || '-'}</td>
-                                    <td style={tdStyle}>{w.truckID || '-'}</td>
-                                    <td style={tdStyle}><StatusBadge status={w.finalStatus} /></td>
-                                    <td style={tdStyle}>{new Date(w.timestamp).toLocaleString()}</td>
+                                    <td style={{ padding: '0.75rem', textAlign: 'left' }}><code>{w.workflowId}</code></td>
+                                    <td style={{ padding: '0.75rem', textAlign: 'left' }}>{w.parcelID || '-'}</td>
+                                    <td style={{ padding: '0.75rem', textAlign: 'left' }}>{w.truckID || '-'}</td>
+                                    <td style={{ padding: '0.75rem', textAlign: 'left' }}><StatusBadge status={w.finalStatus} /></td>
+                                    <td style={{ padding: '0.75rem', textAlign: 'left' }}>{new Date(w.timestamp).toLocaleString()}</td>
                                 </tr>
 
                                 {/* Expanded Row: Step Details */}
                                 {expandedRow === w.workflowId && (
                                     <tr>
-                                        <td colSpan="5" style={{ padding: '1rem', backgroundColor: '#f8f9fa' }}>
+                                        <td colSpan="5" style={{ padding: '1rem', backgroundColor: 'var(--bg-secondary)' }}>
                                             <strong>Step Details:</strong>
                                             <table style={{ width: '100%', marginTop: '0.5rem', borderCollapse: 'collapse' }}>
                                                 <thead>
-                                                    <tr style={{ backgroundColor: '#e9ecef' }}>
-                                                        <th style={innerThStyle}>Step Name</th>
-                                                        <th style={innerThStyle}>Status</th>
-                                                        <th style={innerThStyle}>Reason</th>
+                                                    <tr style={{ backgroundColor: 'var(--bg-card)', color: 'var(--text-primary)' }}>
+                                                        <th style={{ padding: '0.5rem', textAlign: 'left', fontSize: '0.9rem' }}>Step Name</th>
+                                                        <th style={{ padding: '0.5rem', textAlign: 'left', fontSize: '0.9rem' }}>Status</th>
+                                                        <th style={{ padding: '0.5rem', textAlign: 'left', fontSize: '0.9rem' }}>Reason</th>
                                                     </tr>
                                                 </thead>
                                                 <tbody>
                                                     {w.steps?.map((step, idx) => (
-                                                        <tr key={idx} style={{ borderBottom: '1px solid #ddd' }}>
-                                                            <td style={innerTdStyle}>{step.stepName}</td>
-                                                            <td style={innerTdStyle}>
+                                                        <tr key={idx} style={{ borderBottom: '1px solid var(--border-color)', color: 'var(--text-primary)' }}>
+                                                            <td style={{ padding: '0.5rem', textAlign: 'left', fontSize: '0.9rem' }}>{step.stepName}</td>
+                                                            <td style={{ padding: '0.5rem', textAlign: 'left', fontSize: '0.9rem' }}>
                                                                 <span style={{
-                                                                    color: step.status === 'SUCCESS' ? '#28a745' : '#dc3545',
+                                                                    color: step.status === 'SUCCESS' ? 'var(--severity-success)' : 'var(--severity-critical)',
                                                                     fontWeight: 'bold'
                                                                 }}>
                                                                     {step.status}
                                                                 </span>
                                                             </td>
-                                                            <td style={innerTdStyle}>{step.reason || '-'}</td>
+                                                            <td style={{ padding: '0.5rem', textAlign: 'left', fontSize: '0.9rem' }}>{step.reason || '-'}</td>
                                                         </tr>
                                                     ))}
                                                 </tbody>

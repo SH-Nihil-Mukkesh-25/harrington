@@ -43,6 +43,9 @@ const VoiceAssistantPage = () => {
         setAiWarning('');
     };
 
+    // Ref to always hold the latest handleUserSpeech function
+    const handleUserSpeechRef = useRef(null);
+
     useEffect(() => {
         // Initialize Speech Recognition
         if ('webkitSpeechRecognition' in window) {
@@ -56,7 +59,8 @@ const VoiceAssistantPage = () => {
 
             recognition.onresult = (event) => {
                 const text = event.results[0][0].transcript;
-                handleUserSpeech(text);
+                // Call the ref to get the LATEST function
+                handleUserSpeechRef.current?.(text);
             };
 
             recognitionRef.current = recognition;
@@ -183,9 +187,13 @@ const VoiceAssistantPage = () => {
         addToTranscript('ai', '🤖 Processing with Advanced AI...');
 
         try {
+            // Get current screen context
+            const screenContext = window.getCurrentOperationContext?.() || null;
+
             const res = await axios.post(`${API_BASE_URL}/ai/agent`, {
                 message: text,
-                history: transcript.slice(-10) // Send last 10 messages for context
+                history: transcript.slice(-10), // Send last 10 messages for context
+                screenContext
             }, {
                 timeout: 30000 // 30 second timeout
             });
@@ -268,37 +276,41 @@ const VoiceAssistantPage = () => {
 
                 case 'createParcel': {
                     if (args?.parcelID && args?.destination && args?.weight) {
+                        // Strip 'kg' and whitespace from weight
+                        const weightNum = parseFloat(String(args.weight).replace(/kg/gi, '').trim());
                         const res = await axios.post(`${API_BASE_URL}/parcels`, {
-                            parcelID: args.parcelID,
-                            destination: args.destination,
-                            weight: Number(args.weight)
+                            parcelID: String(args.parcelID).trim(),
+                            destination: String(args.destination).trim().toUpperCase(),
+                            weight: weightNum
                         });
                         setLastAction({ tool: 'createParcel', result: res.data });
-                        addToTranscript('ai', `✅ Parcel ${args.parcelID} created → ${args.destination} (${args.weight}kg)`);
+                        addToTranscript('ai', `✅ Parcel ${args.parcelID} created → ${args.destination} (${weightNum}kg)`);
                     }
                     break;
                 }
 
                 case 'createTruck': {
                     if (args?.truckID && args?.routeID && args?.maxCapacity) {
+                        const capacityNum = parseFloat(String(args.maxCapacity).replace(/kg/gi, '').trim());
                         const res = await axios.post(`${API_BASE_URL}/trucks`, {
-                            truckID: args.truckID,
-                            routeID: args.routeID,
-                            maxCapacity: Number(args.maxCapacity)
+                            truckID: String(args.truckID).trim(),
+                            routeID: String(args.routeID).trim().toUpperCase(),
+                            maxCapacity: capacityNum
                         });
                         setLastAction({ tool: 'createTruck', result: res.data });
-                        addToTranscript('ai', `✅ Truck ${args.truckID} created on route ${args.routeID}`);
+                        addToTranscript('ai', `✅ Truck ${args.truckID} created on route ${args.routeID} (Cap: ${capacityNum}kg)`);
                     }
                     break;
                 }
 
                 case 'createRoute': {
                     if (args?.routeID && args?.stops && args?.capacityLimit) {
-                        const stopsArray = args.stops.split(',').map(s => s.trim());
+                        const stopsArray = args.stops.split(',').map(s => s.trim().toUpperCase());
+                        const capLimitNum = parseFloat(String(args.capacityLimit).replace(/kg/gi, '').trim());
                         const res = await axios.post(`${API_BASE_URL}/routes`, {
-                            routeID: args.routeID,
+                            routeID: String(args.routeID).trim().toUpperCase(),
                             stops: stopsArray,
-                            capacityLimit: Number(args.capacityLimit)
+                            capacityLimit: capLimitNum
                         });
                         setLastAction({ tool: 'createRoute', result: res.data });
                         addToTranscript('ai', `✅ Route ${args.routeID} created: ${stopsArray.join(' → ')}`);
@@ -313,8 +325,36 @@ const VoiceAssistantPage = () => {
                     break;
                 }
 
+                // ========== DELETE TOOLS ==========
+                case 'deleteParcel': {
+                    if (args?.parcelID) {
+                        const res = await axios.delete(`${API_BASE_URL}/parcels/${encodeURIComponent(args.parcelID)}`);
+                        setLastAction({ tool: 'deleteParcel', result: res.data });
+                        addToTranscript('ai', `🗑️ Parcel ${args.parcelID} deleted successfully`);
+                    }
+                    break;
+                }
+
+                case 'deleteTruck': {
+                    if (args?.truckID) {
+                        const res = await axios.delete(`${API_BASE_URL}/trucks/${encodeURIComponent(args.truckID)}`);
+                        setLastAction({ tool: 'deleteTruck', result: res.data });
+                        addToTranscript('ai', `🗑️ Truck ${args.truckID} deleted successfully`);
+                    }
+                    break;
+                }
+
+                case 'deleteRoute': {
+                    if (args?.routeID) {
+                        const res = await axios.delete(`${API_BASE_URL}/routes/${encodeURIComponent(args.routeID)}`);
+                        setLastAction({ tool: 'deleteRoute', result: res.data });
+                        addToTranscript('ai', `🗑️ Route ${args.routeID} deleted successfully`);
+                    }
+                    break;
+                }
+
                 default:
-                    console.log('Unknown tool call:', name);
+                    console.warn('Unknown tool call:', name);
                     addToTranscript('ai', `⚠️ Unknown action: ${name}`);
             }
         } catch (err) {
@@ -342,6 +382,11 @@ const VoiceAssistantPage = () => {
             setIsProcessing(false);
         }
     };
+
+    // Keep the ref updated with the latest function
+    useEffect(() => {
+        handleUserSpeechRef.current = handleUserSpeech;
+    });
 
     const speak = (text) => {
         if ('speechSynthesis' in window) {
@@ -413,9 +458,10 @@ const VoiceAssistantPage = () => {
             <div style={{ display: 'flex', gap: '2rem', height: '80vh' }}>
 
                 {/* Left Panel: Conversation */}
-                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', border: '1px solid #ddd', borderRadius: '8px', padding: '1rem', backgroundColor: '#fff' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #eee', paddingBottom: '0.5rem' }}>
-                        <h2 style={{ margin: 0 }}>Conversation</h2>
+                {/* Left Panel: Conversation */}
+                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', border: '1px solid var(--border-color)', borderRadius: '8px', padding: '1rem', backgroundColor: 'var(--bg-card)' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.5rem' }}>
+                        <h2 style={{ margin: 0, color: 'var(--text-primary)' }}>Conversation</h2>
                         <span style={{
                             fontSize: '0.75rem',
                             padding: '4px 8px',
@@ -431,8 +477,8 @@ const VoiceAssistantPage = () => {
                         {transcript.map((msg, idx) => (
                             <div key={idx} style={{
                                 alignSelf: msg.sender === 'user' ? 'flex-end' : 'flex-start',
-                                backgroundColor: msg.sender === 'user' ? '#007bff' : '#f0f0f0',
-                                color: msg.sender === 'user' ? '#fff' : '#333',
+                                backgroundColor: msg.sender === 'user' ? 'var(--primary-color)' : 'var(--bg-secondary)',
+                                color: msg.sender === 'user' ? '#fff' : 'var(--text-primary)',
                                 padding: '0.8rem 1.2rem',
                                 borderRadius: '16px',
                                 maxWidth: '70%'
@@ -442,7 +488,7 @@ const VoiceAssistantPage = () => {
                         ))}
                     </div>
 
-                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', paddingTop: '1rem', borderTop: '1px solid #eee', gap: '0.5rem' }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', paddingTop: '1rem', borderTop: '1px solid var(--border-color)', gap: '0.5rem' }}>
                         {/* Processing Indicator */}
                         {isProcessing && (
                             <div style={{ fontSize: '0.85rem', color: '#6b7280' }}>
@@ -484,23 +530,23 @@ const VoiceAssistantPage = () => {
                             }}
                             style={{ width: '100%', padding: '0.5rem' }}
                         />
-                        <small style={{ color: '#999' }}>Debug: Type and hit Enter to simulate voice.</small>
+                        <small style={{ color: 'var(--text-secondary)' }}>Debug: Type and hit Enter to simulate voice.</small>
                     </div>
                 </div>
 
                 {/* Right Panel: Action Log */}
-                <div style={{ flex: 1, border: '1px solid #ddd', borderRadius: '8px', padding: '1rem', backgroundColor: '#f8f9fa', overflowY: 'auto' }}>
-                    <h2 style={{ borderBottom: '1px solid #ddd', paddingBottom: '0.5rem', marginBottom: '1rem' }}>Backend Action Log</h2>
+                <div style={{ flex: 1, border: '1px solid var(--border-color)', borderRadius: '8px', padding: '1rem', backgroundColor: 'var(--bg-card)', overflowY: 'auto' }}>
+                    <h2 style={{ borderBottom: '1px solid var(--border-color)', paddingBottom: '0.5rem', marginBottom: '1rem', color: 'var(--text-primary)' }}>Backend Action Log</h2>
 
                     {lastAction ? (
-                        <div style={{ backgroundColor: '#fff', padding: '1rem', borderRadius: '8px', border: '1px solid #ccc' }}>
-                            <h4 style={{ margin: '0 0 0.5rem 0', color: '#6610f2' }}>Tool: {lastAction.tool}</h4>
-                            <pre style={{ overflowX: 'auto', fontSize: '0.9rem' }}>
+                        <div style={{ backgroundColor: 'var(--bg-secondary)', padding: '1rem', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
+                            <h4 style={{ margin: '0 0 0.5rem 0', color: 'var(--accent-color)' }}>Tool: {lastAction.tool}</h4>
+                            <pre style={{ overflowX: 'auto', fontSize: '0.9rem', color: 'var(--text-primary)' }}>
                                 {JSON.stringify(lastAction.result, null, 2)}
                             </pre>
                         </div>
                     ) : (
-                        <p style={{ color: '#666', fontStyle: 'italic' }}>No actions executed yet.</p>
+                        <p style={{ color: 'var(--text-secondary)', fontStyle: 'italic' }}>No actions executed yet.</p>
                     )}
                 </div>
 

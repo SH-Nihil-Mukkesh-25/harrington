@@ -62,7 +62,7 @@ router.post('/admin/road-status', (req, res) => {
 // POST /api/v3/external/tender (Protected 3PL API)
 router.post('/external/tender', validateExternalKey, (req, res) => {
     // Audit: Export all unassigned parcels
-    const unassigned = parcels.filter(p => !p.assignedTruckId);
+    const unassigned = parcels.filter(p => !p.assignedTruckID);
 
     if (unassigned.length === 0) {
         return res.json({ message: "No unassigned parcels to tender." });

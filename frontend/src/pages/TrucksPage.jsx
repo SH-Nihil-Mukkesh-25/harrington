@@ -46,7 +46,7 @@ const TrucksPage = () => {
         try {
             const payload = {
                 ...formData,
-                maxCapacity: Number(formData.maxCapacity)
+                maxCapacity: typeof formData.maxCapacity === 'string' ? parseFloat(formData.maxCapacity.replace(/kg/gi, '').trim()) : Number(formData.maxCapacity)
             };
             await axios.post(`${API_BASE_URL}/trucks`, payload);
             setFormData({ truckID: '', routeID: '', maxCapacity: '' });

@@ -74,7 +74,7 @@ const OperationsMapPage = () => {
     }, []);
 
     // Get assigned parcels for a truck
-    const getAssignedParcels = (truckID) => parcels.filter(p => p.assignedTruckId === truckID);
+    const getAssignedParcels = (truckID) => parcels.filter(p => p.assignedTruckID === truckID);
 
     // Get trucks on a route
     const getTrucksOnRoute = (routeID) => trucks.filter(t => t.routeID === routeID);
@@ -116,7 +116,7 @@ const OperationsMapPage = () => {
                 }}>
                     <h3 style={{ margin: 0, fontSize: '1.1rem' }}>📍 Active Routes</h3>
                     <p style={{ margin: '0.25rem 0 0 0', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
-                        {routes.length} routes • {trucks.length} trucks • {parcels.filter(p => p.assignedTruckId).length} assigned parcels
+                        {routes.length} routes • {trucks.length} trucks • {parcels.filter(p => p.assignedTruckID).length} assigned parcels
                     </p>
                 </div>
 

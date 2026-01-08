@@ -14,7 +14,7 @@ const { findCheapestPath } = require('./routingEngine');
  */
 const generateProposals = () => {
     // 1. Scan Pending Parcels
-    const pendingParcels = parcels.filter(p => !p.assignedTruckId);
+    const pendingParcels = parcels.filter(p => !p.assignedTruckID);
 
     // 2. Spatial Clustering (Group by Destination)
     const clusters = {};
@@ -36,7 +36,7 @@ const generateProposals = () => {
             // Simple check: Truck Max >= Cluster Weight (Assuming truck is empty for this proposal)
             // Real logic would be more complex (current load + new load)
             const currentTruckLoad = parcels
-                .filter(p => p.assignedTruckId === t.truckID)
+                .filter(p => p.assignedTruckID === t.truckID)
                 .reduce((sum, p) => sum + (Number(p.weight) || 0), 0);
 
             return (currentTruckLoad + cluster.totalWeight) <= t.maxCapacity;

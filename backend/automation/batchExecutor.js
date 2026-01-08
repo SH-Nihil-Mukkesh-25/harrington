@@ -36,7 +36,7 @@ const executeBatch = async (assignments) => {
     const batchId = generateID();
 
     try {
-        console.log(`[Batch ${batchId}] Starting execution of ${assignments.length} assignments.`);
+
 
         // Simulate DB Transaction Start Latency (to prove Mutex blocks others)
         await sleep(200);
@@ -72,7 +72,7 @@ const executeBatch = async (assignments) => {
 
             // Verify Capacity (Current + Proposed Batch)
             const currentLoad = parcels
-                .filter(p => p.assignedTruckId === truckID)
+                .filter(p => p.assignedTruckID === truckID)
                 .reduce((sum, p) => sum + (Number(p.weight) || 0), 0);
 
             let acceptedWeight = 0;
@@ -87,7 +87,7 @@ const executeBatch = async (assignments) => {
                     results.errors.push(`Parcel ${item.parcelID} not found.`);
                     continue;
                 }
-                if (parcel.assignedTruckId) {
+                if (parcel.assignedTruckID) {
                     results.errors.push(`Parcel ${item.parcelID} is already assigned.`);
                     continue; // Skip already assigned
                 }
@@ -140,7 +140,7 @@ const executeBatch = async (assignments) => {
                 }
 
                 validAssignments.forEach(p => {
-                    p.assignedTruckId = truckID;
+                    p.assignedTruckID = truckID;
                 });
                 results.successCount += validAssignments.length;
 
@@ -166,7 +166,7 @@ const executeBatch = async (assignments) => {
     } finally {
         // Release Lock
         isProcessingBatch = false;
-        console.log(`[Batch ${batchId}] Completed. Success: ${results.successCount}, Failures: ${results.failureCount}`);
+
     }
 
     return {
