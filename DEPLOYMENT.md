@@ -1,4 +1,6 @@
-# 🚀 Deployment Guide: TMMR Backend on Render
+# 🚀 Full Stack Deployment Guide: TMMR
+
+This guide covers deploying the **Backend to Render** and **Frontend to Vercel**.
 
 This guide will help you deploy the **TMMR Backend** to Render.com, a free cloud hosting platform.
 
@@ -52,3 +54,25 @@ Once deployed, you need to tell your local (or deployed) frontend where the back
 
 ## ⚠️ Important Note
 Render's free tier spins down after inactivity. The first request might take **50+ seconds** to wake it up. This is normal for free instances.
+
+---
+
+# 🌐 Frontend Deployment (Vercel)
+
+Now that your backend is running, deploy the React frontend.
+
+1.  **Sign Up/Login**: Go to [vercel.com](https://vercel.com) and log in.
+2.  **Add New Project**: Click **"Add New..."** -> **"Project"**.
+3.  **Connect Repo**: Import your `tmmr-b2b` repository.
+4.  **Configure Project**:
+    - **Framework Preset**: Vercel should auto-detect "Vite".
+    - **Root Directory**: Click "Edit" and select `frontend`. **(CRITICAL STEP)**
+    - **Environment Variables**:
+      - Add `VITE_API_BASE_URL` with your **Render Backend URL** (e.g., `https://tmmr-backend-xyz.onrender.com/api`).
+5.  **Deploy**: Click **Deploy**.
+
+### 🎉 Success!
+Your full stack application is now live!
+- **Frontend**: `https://tmmr-b2b.vercel.app` (or similar)
+- **Backend**: `https://tmmr-backend.onrender.com`
+
