@@ -1,0 +1,109 @@
+[
+    {
+        "tool_name": "assignParcel",
+        "description": "Assigns a parcel to a truck after validating route, capacity, and uniqueness.",
+        "method": "POST",
+        "endpoint": "/api/assignParcel",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "parcelID": {
+                    "type": "string",
+                    "description": "The unique identifier of the parcel (e.g., 'P123'). MUST be an existing ID."
+                },
+                "truckID": {
+                    "type": "string",
+                    "description": "The unique identifier of the truck (e.g., 'T456'). MUST be an existing ID."
+                }
+            },
+            "required": [
+                "parcelID",
+                "truckID"
+            ]
+        },
+        "output_schema": {
+            "success": {
+                "message": "Assignment successful"
+            },
+            "error": {
+                "error": "Human-readable error message"
+            }
+        },
+        "rules": [
+            "Both parcelID and truckID are REQUIRED.",
+            "Do not allow missing or invented fields."
+        ]
+    },
+    {
+        "tool_name": "getAlerts",
+        "description": "Fetches all system alerts generated from failed assignments.",
+        "method": "GET",
+        "endpoint": "/api/alerts",
+        "input_schema": {},
+        "output_schema": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "alertID": {
+                        "type": "string"
+                    },
+                    "severity": {
+                        "type": "string",
+                        "enum": [
+                            "SL-1",
+                            "SL-2",
+                            "SL-3"
+                        ]
+                    },
+                    "message": {
+                        "type": "string"
+                    },
+                    "parcelID": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "truckID": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "timestamp": {
+                        "type": "string",
+                        "format": "date-time"
+                    }
+                }
+            }
+        }
+    },
+    {
+        "tool_name": "getSystemStatus",
+        "description": "Fetches a summary of the current system state (counts of routes, trucks, parcels, and alerts).",
+        "method": "GET",
+        "endpoint": "/api/status",
+        "input_schema": {},
+        "output_schema": {
+            "type": "object",
+            "properties": {
+                "totalRoutes": {
+                    "type": "number"
+                },
+                "totalTrucks": {
+                    "type": "number"
+                },
+                "totalParcels": {
+                    "type": "number"
+                },
+                "unassignedParcels": {
+                    "type": "number"
+                },
+                "activeAlerts": {
+                    "type": "number"
+                }
+            }
+        }
+    }
+]

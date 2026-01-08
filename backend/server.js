@@ -1,4 +1,4 @@
-const express = require('express');
+const express = require('express'); // Force restart
 const cors = require('cors');
 
 const app = express();

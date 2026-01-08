@@ -9,6 +9,8 @@ const RoutesPage = () => {
         stops: '',
         capacityLimit: ''
     });
+    const [deleteConfirm, setDeleteConfirm] = useState(null); // ID of route pending delete
+    const [message, setMessage] = useState(null); // { type: 'success' | 'error', text: string }
 
     useEffect(() => {
         fetchRoutes();
@@ -27,26 +29,55 @@ const RoutesPage = () => {
         setFormData({ ...formData, [e.target.name]: e.target.value });
     };
 
+    const showMessage = (type, text) => {
+        setMessage({ type, text });
+        setTimeout(() => setMessage(null), 5000);
+    };
+
     const handleSubmit = async (e) => {
         e.preventDefault();
         try {
             const payload = {
                 ...formData,
-                stops: formData.stops.split(',').map(s => s.trim()), // Convert string to array
+                stops: formData.stops.split(',').map(s => s.trim()),
                 capacityLimit: Number(formData.capacityLimit)
             };
             await axios.post(`${API_BASE_URL}/routes`, payload);
             setFormData({ routeID: '', stops: '', capacityLimit: '' });
             fetchRoutes();
+            showMessage('success', 'Route added successfully');
         } catch (error) {
             console.error('Error adding route:', error);
-            alert(error.response?.data?.error || 'Failed to add route');
+            showMessage('error', error.response?.data?.error || 'Failed to add route');
         }
+    };
+
+    const handleDelete = async (routeID) => {
+        try {
+            await axios.delete(`${API_BASE_URL}/routes/${routeID}`);
+            setDeleteConfirm(null);
+            fetchRoutes();
+            showMessage('success', `Route '${routeID}' deleted successfully`);
+        } catch (error) {
+            setDeleteConfirm(null);
+            showMessage('error', error.response?.data?.error || 'Failed to delete route');
+        }
+    };
+
+    const msgStyle = {
+        padding: '1rem',
+        marginBottom: '1rem',
+        borderRadius: '4px',
+        backgroundColor: message?.type === 'success' ? '#d4edda' : '#f8d7da',
+        color: message?.type === 'success' ? '#155724' : '#721c24',
+        border: `1px solid ${message?.type === 'success' ? '#c3e6cb' : '#f5c6cb'}`
     };
 
     return (
         <div>
             <h2>Routes Management</h2>
+
+            {message && <div style={msgStyle}>{message.text}</div>}
 
             <section style={{ marginBottom: '2rem', padding: '1rem', border: '1px solid #ddd' }}>
                 <h3>Add New Route</h3>
@@ -68,12 +99,13 @@ const RoutesPage = () => {
                     <input
                         name="capacityLimit"
                         type="number"
-                        placeholder="Capacity Limit"
+                        min="1"
+                        placeholder="Route Capacity Limit"
                         value={formData.capacityLimit}
                         onChange={handleChange}
                         required
                     />
-                    <button type="submit" disabled={!formData.routeID || !formData.stops || !formData.capacityLimit}>
+                    <button type="submit" disabled={!formData.routeID || !formData.stops || !formData.capacityLimit || Number(formData.capacityLimit) <= 0}>
                         Add Route
                     </button>
                 </form>
@@ -86,7 +118,8 @@ const RoutesPage = () => {
                         <tr>
                             <th>Route ID</th>
                             <th>Stops</th>
-                            <th>Capacity Limit</th>
+                            <th>Route Capacity Limit</th>
+                            <th>Actions</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -95,11 +128,45 @@ const RoutesPage = () => {
                                 <td>{r.routeID}</td>
                                 <td>{Array.isArray(r.stops) ? r.stops.join(', ') : r.stops}</td>
                                 <td>{r.capacityLimit}</td>
+                                <td>
+                                    {deleteConfirm === r.routeID ? (
+                                        <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                                            <span style={{ fontSize: '0.9rem' }}>Delete?</span>
+                                            <button
+                                                onClick={() => handleDelete(r.routeID)}
+                                                style={{ backgroundColor: '#dc3545', color: 'white', border: 'none', borderRadius: '4px', padding: '0.3rem 0.6rem', cursor: 'pointer' }}
+                                            >
+                                                Yes
+                                            </button>
+                                            <button
+                                                onClick={() => setDeleteConfirm(null)}
+                                                style={{ backgroundColor: '#6c757d', color: 'white', border: 'none', borderRadius: '4px', padding: '0.3rem 0.6rem', cursor: 'pointer' }}
+                                            >
+                                                No
+                                            </button>
+                                        </div>
+                                    ) : (
+                                        <button
+                                            onClick={() => setDeleteConfirm(r.routeID)}
+                                            style={{
+                                                cursor: 'pointer',
+                                                backgroundColor: '#dc3545',
+                                                color: 'white',
+                                                border: 'none',
+                                                borderRadius: '4px',
+                                                padding: '0.4rem 0.8rem',
+                                                fontSize: '1rem'
+                                            }}
+                                        >
+                                            🗑️
+                                        </button>
+                                    )}
+                                </td>
                             </tr>
                         ))}
                         {routes.length === 0 && (
                             <tr>
-                                <td colSpan="3" style={{ textAlign: 'center' }}>No routes found</td>
+                                <td colSpan="4" style={{ textAlign: 'center' }}>No routes found</td>
                             </tr>
                         )}
                     </tbody>

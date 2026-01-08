@@ -9,6 +9,8 @@ const TrucksPage = () => {
         routeID: '',
         maxCapacity: ''
     });
+    const [deleteConfirm, setDeleteConfirm] = useState(null);
+    const [message, setMessage] = useState(null);
 
     useEffect(() => {
         fetchTrucks();
@@ -27,6 +29,11 @@ const TrucksPage = () => {
         setFormData({ ...formData, [e.target.name]: e.target.value });
     };
 
+    const showMessage = (type, text) => {
+        setMessage({ type, text });
+        setTimeout(() => setMessage(null), 5000);
+    };
+
     const handleSubmit = async (e) => {
         e.preventDefault();
         try {
@@ -37,15 +44,39 @@ const TrucksPage = () => {
             await axios.post(`${API_BASE_URL}/trucks`, payload);
             setFormData({ truckID: '', routeID: '', maxCapacity: '' });
             fetchTrucks();
+            showMessage('success', 'Truck added successfully');
         } catch (error) {
             console.error('Error adding truck:', error);
-            alert(error.response?.data?.error || 'Failed to add truck');
+            showMessage('error', error.response?.data?.error || 'Failed to add truck');
         }
+    };
+
+    const handleDelete = async (truckID) => {
+        try {
+            await axios.delete(`${API_BASE_URL}/trucks/${truckID}`);
+            setDeleteConfirm(null);
+            fetchTrucks();
+            showMessage('success', `Truck '${truckID}' deleted successfully`);
+        } catch (error) {
+            setDeleteConfirm(null);
+            showMessage('error', error.response?.data?.error || 'Failed to delete truck');
+        }
+    };
+
+    const msgStyle = {
+        padding: '1rem',
+        marginBottom: '1rem',
+        borderRadius: '4px',
+        backgroundColor: message?.type === 'success' ? '#d4edda' : '#f8d7da',
+        color: message?.type === 'success' ? '#155724' : '#721c24',
+        border: `1px solid ${message?.type === 'success' ? '#c3e6cb' : '#f5c6cb'}`
     };
 
     return (
         <div>
             <h2>Trucks Fleet</h2>
+
+            {message && <div style={msgStyle}>{message.text}</div>}
 
             <section style={{ marginBottom: '2rem', padding: '1rem', border: '1px solid #ddd' }}>
                 <h3>Add New Truck</h3>
@@ -67,12 +98,13 @@ const TrucksPage = () => {
                     <input
                         name="maxCapacity"
                         type="number"
-                        placeholder="Max Capacity"
+                        min="1"
+                        placeholder="Truck Max Capacity"
                         value={formData.maxCapacity}
                         onChange={handleChange}
                         required
                     />
-                    <button type="submit" disabled={!formData.truckID || !formData.routeID || !formData.maxCapacity}>
+                    <button type="submit" disabled={!formData.truckID || !formData.routeID || !formData.maxCapacity || Number(formData.maxCapacity) <= 0}>
                         Add Truck
                     </button>
                 </form>
@@ -85,7 +117,8 @@ const TrucksPage = () => {
                         <tr>
                             <th>Truck ID</th>
                             <th>Route ID</th>
-                            <th>Max Capacity</th>
+                            <th>Truck Max Capacity</th>
+                            <th>Actions</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -94,11 +127,45 @@ const TrucksPage = () => {
                                 <td>{t.truckID}</td>
                                 <td>{t.routeID}</td>
                                 <td>{t.maxCapacity}</td>
+                                <td>
+                                    {deleteConfirm === t.truckID ? (
+                                        <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                                            <span style={{ fontSize: '0.9rem' }}>Delete?</span>
+                                            <button
+                                                onClick={() => handleDelete(t.truckID)}
+                                                style={{ backgroundColor: '#dc3545', color: 'white', border: 'none', borderRadius: '4px', padding: '0.3rem 0.6rem', cursor: 'pointer' }}
+                                            >
+                                                Yes
+                                            </button>
+                                            <button
+                                                onClick={() => setDeleteConfirm(null)}
+                                                style={{ backgroundColor: '#6c757d', color: 'white', border: 'none', borderRadius: '4px', padding: '0.3rem 0.6rem', cursor: 'pointer' }}
+                                            >
+                                                No
+                                            </button>
+                                        </div>
+                                    ) : (
+                                        <button
+                                            onClick={() => setDeleteConfirm(t.truckID)}
+                                            style={{
+                                                cursor: 'pointer',
+                                                backgroundColor: '#dc3545',
+                                                color: 'white',
+                                                border: 'none',
+                                                borderRadius: '4px',
+                                                padding: '0.4rem 0.8rem',
+                                                fontSize: '1rem'
+                                            }}
+                                        >
+                                            🗑️
+                                        </button>
+                                    )}
+                                </td>
                             </tr>
                         ))}
                         {trucks.length === 0 && (
                             <tr>
-                                <td colSpan="3" style={{ textAlign: 'center' }}>No trucks found</td>
+                                <td colSpan="4" style={{ textAlign: 'center' }}>No trucks found</td>
                             </tr>
                         )}
                     </tbody>

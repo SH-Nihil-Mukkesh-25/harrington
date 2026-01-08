@@ -8,6 +8,9 @@ import TrucksPage from './pages/TrucksPage';
 import ParcelsPage from './pages/ParcelsPage';
 import AssignmentsPage from './pages/AssignmentsPage';
 import AlertsPage from './pages/AlertsPage';
+import VoiceAssistantPage from './pages/VoiceAssistantPage';
+import WorkflowsPage from './pages/WorkflowsPage';
+import OpsSummaryPage from './pages/OpsSummaryPage';
 import { API_BASE_URL } from './api/config';
 import './App.css';
 
@@ -53,6 +56,9 @@ function App() {
           <Route path="parcels" element={<ParcelsPage />} />
           <Route path="assignments" element={<AssignmentsPage />} />
           <Route path="alerts" element={<AlertsPage />} />
+          <Route path="assistant" element={<VoiceAssistantPage />} />
+          <Route path="workflows" element={<WorkflowsPage />} />
+          <Route path="ops" element={<OpsSummaryPage />} />
         </Route>
       </Routes>
     </BrowserRouter>
