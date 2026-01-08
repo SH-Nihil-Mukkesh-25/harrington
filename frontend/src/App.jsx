@@ -12,6 +12,8 @@ import VoiceAssistantPage from './pages/VoiceAssistantPage';
 import WorkflowsPage from './pages/WorkflowsPage';
 import OpsSummaryPage from './pages/OpsSummaryPage';
 import OperationsMapPage from './pages/OperationsMapPage';
+import SentinelPage from './pages/SentinelPage';
+import TNOptimizer from './pages/TNOptimizer';
 import { API_BASE_URL } from './api/config';
 import './App.css';
 
@@ -23,7 +25,7 @@ function App() {
       try {
         const response = await axios.get(`${API_BASE_URL}/health`);
         if (response.data) {
-          setHealth(`Backend: ${response.data.status}`);
+            setHealth(`Backend: ${response.data.status}`);
         }
       } catch (error) {
         console.error('Health check failed:', error);
@@ -45,11 +47,13 @@ function App() {
         border: '1px solid #ccc',
         borderRadius: '4px',
         fontSize: '12px',
-        fontFamily: 'monospace'
+        fontFamily: 'monospace',
+        zIndex: 9999
       }}>
         {health}
       </div>
       <Routes>
+        <Route path="/sentinel-optimizer" element={<TNOptimizer />} />
         <Route path="/" element={<Layout />}>
           <Route index element={<DashboardPage />} />
           <Route path="routes" element={<RoutesPage />} />
@@ -61,6 +65,7 @@ function App() {
           <Route path="workflows" element={<WorkflowsPage />} />
           <Route path="ops" element={<OpsSummaryPage />} />
           <Route path="map" element={<OperationsMapPage />} />
+          <Route path="sentinel" element={<SentinelPage />} />
         </Route>
       </Routes>
     </BrowserRouter>

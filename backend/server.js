@@ -16,6 +16,14 @@ app.use(express.json());
 
 app.use('/api', apiRoutes);
 
+// --- Phase 1: Sentinel Automation Module ---
+const automationRoutes = require('./automation/routes');
+app.use('/api/v3', automationRoutes);
+
+// --- Phase 2: Sentinel Route Optimizer ---
+const tnOptimizerRoutes = require('./routes/tnOptimizer');
+app.use('/api/tn-optimizer', tnOptimizerRoutes);
+
 // Global Error Handler
 app.use((err, req, res, next) => {
     console.error(err.stack);

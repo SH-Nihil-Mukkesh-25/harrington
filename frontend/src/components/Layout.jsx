@@ -83,6 +83,18 @@ const Layout = () => {
                             🎙️ Assistant
                         </NavLink>
                     </li>
+                    <li>
+                        <NavLink
+                            to="/sentinel"
+                            style={({ isActive }) => ({
+                                ...getLinkStyle({ isActive }),
+                                color: isActive ? '#dc3545' : '#dc3545', // Red for Sentinel
+                                fontWeight: 'bold'
+                            })}
+                        >
+                            🛡️ Sentinel Config
+                        </NavLink>
+                    </li>
                 </ul>
 
                 {/* Dark Mode Toggle - Pushed Right */}
