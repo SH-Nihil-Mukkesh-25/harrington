@@ -2,16 +2,17 @@ import { Link } from 'react-router-dom';
 
 const SettingsPage = () => {
     const cardStyle = {
-        border: '1px solid #ddd',
+        border: '1px solid var(--border-color)',
         borderRadius: '8px',
         padding: '1.5rem',
         textDecoration: 'none',
-        color: 'inherit',
-        backgroundColor: '#fff',
+        color: 'var(--text-primary)',
+        backgroundColor: 'var(--bg-card)',
         transition: 'transform 0.2s, box-shadow 0.2s',
         display: 'flex',
         flexDirection: 'column',
-        gap: '0.5rem'
+        gap: '0.5rem',
+        boxShadow: 'var(--shadow-sm)'
     };
 
     const sectionStyle = {
@@ -20,27 +21,27 @@ const SettingsPage = () => {
 
     return (
         <div style={{ maxWidth: '800px', margin: '0 auto', padding: '2rem' }}>
-            <h1 style={{ borderBottom: '1px solid #eee', paddingBottom: '1rem' }}>⚙️ Settings</h1>
+            <h1 style={{ borderBottom: '1px solid var(--border-color)', paddingBottom: '1rem', color: 'var(--text-primary)' }}>⚙️ Settings</h1>
 
             <section style={sectionStyle}>
-                <h2 style={{ color: '#555', fontSize: '1.2rem', marginBottom: '1rem' }}>🏗️ Infrastructure Management</h2>
+                <h2 style={{ color: 'var(--text-secondary)', fontSize: '1.2rem', marginBottom: '1rem' }}>🏗️ Infrastructure Management</h2>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '1.5rem' }}>
-                    <Link to="/routes" style={cardStyle} className="settings-card">
+                    <Link to="/dashboard/routes" style={cardStyle} className="settings-card">
                         <div style={{ fontSize: '2rem' }}>🛣️</div>
                         <div style={{ fontWeight: 'bold' }}>Manage Routes</div>
-                        <div style={{ fontSize: '0.85rem', color: '#666' }}>Configure delivery paths and stops.</div>
+                        <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Configure delivery paths and stops.</div>
                     </Link>
 
-                    <Link to="/trucks" style={cardStyle} className="settings-card">
+                    <Link to="/dashboard/trucks" style={cardStyle} className="settings-card">
                         <div style={{ fontSize: '2rem' }}>🚛</div>
                         <div style={{ fontWeight: 'bold' }}>Manage Trucks</div>
-                        <div style={{ fontSize: '0.85rem', color: '#666' }}>Update fleet and capacities.</div>
+                        <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Update fleet and capacities.</div>
                     </Link>
 
-                    <Link to="/parcels" style={cardStyle} className="settings-card">
+                    <Link to="/dashboard/parcels" style={cardStyle} className="settings-card">
                         <div style={{ fontSize: '2rem' }}>📦</div>
                         <div style={{ fontWeight: 'bold' }}>Parcel Inventory</div>
-                        <div style={{ fontSize: '0.85rem', color: '#666' }}>View and modify raw parcel data.</div>
+                        <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>View and modify raw parcel data.</div>
                     </Link>
                 </div>
             </section>

@@ -93,17 +93,17 @@ const DashboardPage = () => {
                 <div className="card" style={{ minWidth: '220px', textAlign: 'center', borderTop: '4px solid var(--primary-color)' }}>
                     <h3 style={{ fontSize: '1.2rem', color: 'var(--text-secondary)' }}>Active Routes</h3>
                     <p style={{ fontSize: '3rem', fontWeight: '800', margin: '0.5rem 0', color: 'var(--primary-color)' }}>{stats.routes}</p>
-                    <Link to="/routes">Manage Routes →</Link>
+                    <Link to="/dashboard/routes">Manage Routes →</Link>
                 </div>
                 <div className="card" style={{ minWidth: '220px', textAlign: 'center', borderTop: '4px solid var(--primary-color)' }}>
                     <h3 style={{ fontSize: '1.2rem', color: 'var(--text-secondary)' }}>Trucks Fleet</h3>
                     <p style={{ fontSize: '3rem', fontWeight: '800', margin: '0.5rem 0', color: 'var(--primary-color)' }}>{stats.trucks}</p>
-                    <Link to="/trucks">Manage Trucks →</Link>
+                    <Link to="/dashboard/trucks">Manage Trucks →</Link>
                 </div>
                 <div className="card" style={{ minWidth: '220px', textAlign: 'center', borderTop: '4px solid var(--primary-color)' }}>
                     <h3 style={{ fontSize: '1.2rem', color: 'var(--text-secondary)' }}>Parcel Inventory</h3>
                     <p style={{ fontSize: '3rem', fontWeight: '800', margin: '0.5rem 0', color: 'var(--primary-color)' }}>{stats.parcels}</p>
-                    <Link to="/parcels">Manage Parcels →</Link>
+                    <Link to="/dashboard/parcels">Manage Parcels →</Link>
                 </div>
                 <div className="card" style={{ minWidth: '220px', textAlign: 'center', borderTop: `4px solid ${stats.alerts > 0 ? 'var(--severity-critical)' : 'var(--severity-success)'}` }}>
                     <h3 style={{ fontSize: '1.2rem', color: 'var(--text-secondary)' }}>System Alerts</h3>
@@ -113,14 +113,14 @@ const DashboardPage = () => {
                         margin: '0.5rem 0',
                         color: stats.alerts > 0 ? 'var(--severity-critical)' : 'var(--severity-success)'
                     }}>{stats.alerts}</p>
-                    <Link to="/alerts" style={{ color: stats.alerts > 0 ? 'var(--severity-critical)' : 'inherit', fontWeight: 'bold' }}>
+                    <Link to="/dashboard/alerts" style={{ color: stats.alerts > 0 ? 'var(--severity-critical)' : 'inherit', fontWeight: 'bold' }}>
                         {stats.alerts > 0 ? '⚠️ View Issues' : 'No Issues'}
                     </Link>
                 </div>
             </div>
 
             <div style={{ textAlign: 'center', marginTop: '2rem' }}>
-                <Link to="/assignments" style={{
+                <Link to="/dashboard/assignments" style={{
                     padding: '1rem 2rem',
                     borderRadius: '4px',
                     background: 'var(--primary-color)',
