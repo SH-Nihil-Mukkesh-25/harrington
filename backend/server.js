@@ -1,4 +1,6 @@
+require('dotenv').config();
 const express = require('express');
+// Last restart: 2026-01-08T20:24:15
 const cors = require('cors');
 const helmet = require('helmet');
 const morgan = require('morgan');

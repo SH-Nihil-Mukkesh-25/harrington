@@ -25,6 +25,142 @@ router.get('/health', (req, res) => {
     res.json({ status: 'ok', timestamp: new Date(), message: 'TMMR Backend is healthy' });
 });
 
+// --- AI Availability Status ---
+router.get('/ai/status', (req, res) => {
+    const enabled = !!process.env.GEMINI_API_KEY;
+    res.json({ enabled });
+});
+
+// --- AI Agent Endpoint (Gemini) ---
+const { GoogleGenerativeAI } = require('@google/generative-ai');
+
+const SYSTEM_PROMPT = `You are Zudu, an AI logistics assistant for TMMR (Truck, Map, Monitoring & Routing).
+You help operations managers with FULL logistics operations:
+
+AVAILABLE TOOLS (use these to take actions):
+
+1. QUERY TOOLS:
+   - getSystemStatus: Overview of routes, trucks, alerts
+   - getAlerts: List all active alerts
+   - listRoutes: List all routes
+   - listTrucks: List all trucks
+   - listParcels: List all parcels
+
+2. CREATE TOOLS:
+   - createParcel(parcelID, destination, weight): Create a new parcel
+   - createTruck(truckID, routeID, maxCapacity): Create a new truck
+   - createRoute(routeID, stops, capacityLimit): Create a new route (stops is comma-separated)
+
+3. ACTION TOOLS:
+   - assignParcel(parcelID, truckID): Assign a parcel to a truck
+
+RULES:
+- Be concise and professional
+- When user wants to create something, extract the details and use the appropriate tool
+- If information is missing, ask for it
+- Always confirm actions before executing
+- If asked about non-logistics topics, politely redirect`;
+
+router.post('/ai/agent', async (req, res) => {
+    const { message, history } = req.body;
+
+    if (!message) {
+        return res.status(400).json({ error: 'Message is required' });
+    }
+
+    if (!process.env.GEMINI_API_KEY) {
+        return res.status(503).json({ error: 'AI service not configured' });
+    }
+
+    try {
+        const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+        const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' });
+
+        // Build conversation context
+        const contextMessages = (history || [])
+            .filter(h => h.sender && h.text)
+            .slice(-8)
+            .map(h => `${h.sender === 'user' ? 'User' : 'Assistant'}: ${h.text}`)
+            .join('\n');
+
+        const prompt = `${SYSTEM_PROMPT}
+
+Recent conversation:
+${contextMessages}
+
+User: ${message}
+
+Respond naturally. To execute tools, include them in your response using this format:
+- [TOOL:getSystemStatus]
+- [TOOL:getAlerts]
+- [TOOL:listRoutes]
+- [TOOL:listTrucks]
+- [TOOL:listParcels]
+- [TOOL:createParcel:parcelID:destination:weight]
+- [TOOL:createTruck:truckID:routeID:maxCapacity]
+- [TOOL:createRoute:routeID:stops:capacityLimit]
+- [TOOL:assignParcel:parcelID:truckID]
+
+Your response:`;
+
+        const result = await model.generateContent(prompt);
+        const responseText = result.response.text();
+
+        // Parse tool calls from response (supports up to 4 arguments)
+        const toolCalls = [];
+        const toolMatches = responseText.matchAll(/\[TOOL:(\w+)(?::([^:\]]+))?(?::([^:\]]+))?(?::([^:\]]+))?(?::([^\]]+))?\]/g);
+        
+        for (const match of toolMatches) {
+            const [, toolName, arg1, arg2, arg3, arg4] = match;
+            
+            switch (toolName) {
+                case 'getSystemStatus':
+                case 'getAlerts':
+                case 'listRoutes':
+                case 'listTrucks':
+                case 'listParcels':
+                    toolCalls.push({ name: toolName, args: {} });
+                    break;
+                case 'createParcel':
+                    if (arg1 && arg2 && arg3) {
+                        toolCalls.push({ name: 'createParcel', args: { parcelID: arg1, destination: arg2, weight: arg3 } });
+                    }
+                    break;
+                case 'createTruck':
+                    if (arg1 && arg2 && arg3) {
+                        toolCalls.push({ name: 'createTruck', args: { truckID: arg1, routeID: arg2, maxCapacity: arg3 } });
+                    }
+                    break;
+                case 'createRoute':
+                    if (arg1 && arg2 && arg3) {
+                        toolCalls.push({ name: 'createRoute', args: { routeID: arg1, stops: arg2, capacityLimit: arg3 } });
+                    }
+                    break;
+                case 'assignParcel':
+                    if (arg1 && arg2) {
+                        toolCalls.push({ name: 'assignParcel', args: { parcelID: arg1, truckID: arg2 } });
+                    }
+                    break;
+            }
+        }
+
+        // Clean response (remove tool markers)
+        const cleanResponse = responseText.replace(/\[TOOL:[^\]]+\]/g, '').trim();
+
+        res.json({
+            response: cleanResponse,
+            toolCalls: toolCalls.length > 0 ? toolCalls : undefined
+        });
+
+    } catch (err) {
+        console.error('AI Agent error:', err);
+        res.status(500).json({ 
+            error: 'AI processing failed',
+            details: err.message 
+        });
+    }
+});
+
 // ... (Debug Log omitted, lines 27-31 same)
 // --- Debug Logging ---
 console.log("Loading API Routes...");
@@ -49,6 +185,50 @@ router.post('/reset', (req, res) => {
         success: true, 
         message: 'System reset successful',
         timestamp: new Date()
+    });
+});
+
+// --- System Seed (HACKATHON DEMO LOADER) ---
+router.post('/seed', (req, res) => {
+    // 1. Clear existing
+    routes.length = 0;
+    trucks.length = 0;
+    parcels.length = 0;
+    alerts.length = 0;
+    workflows.length = 0;
+
+    // 2. Add Routes
+    routes.push(
+        { routeID: 'R-NORTH', stops: ['DELHI', 'JAIPUR', 'LUCKNOW'], capacityLimit: 50 },
+        { routeID: 'R-SOUTH', stops: ['CHENNAI', 'BANGALORE', 'HYDERABAD'], capacityLimit: 40 },
+        { routeID: 'R-WEST', stops: ['MUMBAI', 'PUNE', 'AHMEDABAD'], capacityLimit: 60 }
+    );
+
+    // 3. Add Trucks
+    trucks.push(
+        { truckID: 'T-101', routeID: 'R-NORTH', maxCapacity: 20 },
+        { truckID: 'T-102', routeID: 'R-SOUTH', maxCapacity: 15 },
+        { truckID: 'T-103', routeID: 'R-WEST', maxCapacity: 25 },
+        { truckID: 'T-104', routeID: 'R-NORTH', maxCapacity: 20 }
+    );
+
+    // 4. Add Parcels
+    parcels.push(
+        { parcelID: 'P-500', destination: 'DELHI', weight: 5, assignedTruckId: null },
+        { parcelID: 'P-501', destination: 'JAIPUR', weight: 8, assignedTruckId: null },
+        { parcelID: 'P-502', destination: 'CHENNAI', weight: 12, assignedTruckId: null }, // Heavy
+        { parcelID: 'P-503', destination: 'PUNE', weight: 2, assignedTruckId: null }
+    );
+
+    console.log('[DEMO] Test data loaded successfully.');
+    res.json({
+        success: true,
+        message: 'Demo data loaded (3 Routes, 4 Trucks, 4 Parcels)',
+        stats: {
+            routes: 3,
+            trucks: 4,
+            parcels: 4
+        }
     });
 });
 

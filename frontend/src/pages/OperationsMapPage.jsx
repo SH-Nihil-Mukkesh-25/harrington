@@ -1,239 +1,378 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { API_BASE_URL } from '../api/config';
-import MapContainer from '../components/MapContainer';
-import { Polyline, Marker } from '@react-google-maps/api';
+import { MapContainer, TileLayer, Polyline, Marker, Popup, CircleMarker } from 'react-leaflet';
+import 'leaflet/dist/leaflet.css';
 
-// Mock Coordinates Dictionary
+// Fix for default marker icons in React-Leaflet
+import L from 'leaflet';
+delete L.Icon.Default.prototype._getIconUrl;
+L.Icon.Default.mergeOptions({
+    iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon-2x.png',
+    iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon.png',
+    shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png',
+});
+
+// City Coordinates (India-focused for demo)
 const CITY_COORDS = {
-    // Major Indian Cities
-    'MUMBAI': { lat: 19.0760, lng: 72.8777 },
-    'PUNE': { lat: 18.5204, lng: 73.8567 },
-    'BANGALORE': { lat: 12.9716, lng: 77.5946 },
-    'DELHI': { lat: 28.7041, lng: 77.1025 },
-    'CHENNAI': { lat: 13.0827, lng: 80.2707 },
-    'HYDERABAD': { lat: 17.3850, lng: 78.4867 },
-    'KOLKATA': { lat: 22.5726, lng: 88.3639 },
-    'AHMEDABAD': { lat: 23.0225, lng: 72.5714 },
-    'JAIPUR': { lat: 26.9124, lng: 75.7873 },
-    'LUCKNOW': { lat: 26.8467, lng: 80.9461 },
-
-    // Abstract Stops (for demo data)
-    'A': { lat: 19.0760, lng: 72.8777 }, // Mumbai
-    'B': { lat: 18.5204, lng: 73.8567 }, // Pune
-    'C': { lat: 12.9716, lng: 77.5946 }, // Bangalore
-    'D': { lat: 28.7041, lng: 77.1025 }, // Delhi
-    'E': { lat: 13.0827, lng: 80.2707 }, // Chennai
-
-    // Variation: CityA, CityB style
-    'CITYA': { lat: 22.5726, lng: 88.3639 }, // Kolkata
-    'CITYB': { lat: 20.2961, lng: 85.8245 }, // Bhubaneswar
-    'CITYC': { lat: 17.3850, lng: 78.4867 }, // Hyderabad
-    'CITYD': { lat: 13.0827, lng: 80.2707 }, // Chennai
+    'DELHI': [28.7041, 77.1025],
+    'JAIPUR': [26.9124, 75.7873],
+    'LUCKNOW': [26.8467, 80.9461],
+    'CHENNAI': [13.0827, 80.2707],
+    'BANGALORE': [12.9716, 77.5946],
+    'HYDERABAD': [17.3850, 78.4867],
+    'MUMBAI': [19.0760, 72.8777],
+    'PUNE': [18.5204, 73.8567],
+    'AHMEDABAD': [23.0225, 72.5714],
+    'KOLKATA': [22.5726, 88.3639],
+    // Fallbacks
+    'A': [19.0760, 72.8777],
+    'B': [18.5204, 73.8567],
+    'C': [12.9716, 77.5946],
 };
 
-function getCoordinates(city) {
+const getCoords = (city) => {
     if (!city) return null;
-    // Normalize: Remove whitespace, uppercase
-    const key = city.replace(/\s+/g, '').toUpperCase();
-
+    const key = city.toString().trim().toUpperCase();
     if (CITY_COORDS[key]) return CITY_COORDS[key];
-
-    // Deterministic fallback for unknown cities
+    // Deterministic fallback
     let hash = 0;
-    for (let i = 0; i < key.length; i++) {
-        hash = key.charCodeAt(i) + ((hash << 5) - hash);
-    }
-    const lat = 10 + (Math.abs(hash) % 2000) / 100;
-    const lng = 70 + (Math.abs(hash >> 8) % 2000) / 100;
-    return { lat, lng };
-}
+    for (let i = 0; i < key.length; i++) hash = key.charCodeAt(i) + ((hash << 5) - hash);
+    return [12 + (Math.abs(hash) % 16), 74 + (Math.abs(hash >> 8) % 10)];
+};
+
+// Color palette for routes
+const ROUTE_COLORS = ['#10b981', '#3b82f6', '#f59e0b', '#8b5cf6', '#ef4444', '#06b6d4'];
 
 const OperationsMapPage = () => {
     const [routes, setRoutes] = useState([]);
     const [trucks, setTrucks] = useState([]);
-    const [alerts, setAlerts] = useState([]);
+    const [parcels, setParcels] = useState([]);
     const [loading, setLoading] = useState(true);
-    const [error, setError] = useState(null);
+    const [selectedRoute, setSelectedRoute] = useState(null);
 
     useEffect(() => {
         const fetchData = async () => {
             try {
-                // Clear error on new attempt
-                setError(null);
-                const [routesRes, trucksRes, alertsRes] = await Promise.all([
+                const [routesRes, trucksRes, parcelsRes] = await Promise.all([
                     axios.get(`${API_BASE_URL}/routes`),
                     axios.get(`${API_BASE_URL}/trucks`),
-                    axios.get(`${API_BASE_URL}/alerts`)
+                    axios.get(`${API_BASE_URL}/parcels`)
                 ]);
                 setRoutes(routesRes.data);
                 setTrucks(trucksRes.data);
-                setAlerts(alertsRes.data);
+                setParcels(parcelsRes.data);
             } catch (err) {
-                console.error("Error fetching map data:", err);
-                setError("Unable to load live data. Please check your connection.");
+                console.error('Error fetching map data:', err);
             } finally {
                 setLoading(false);
             }
         };
         fetchData();
-        // Refresh every 30s
-        const interval = setInterval(fetchData, 30000);
+        const interval = setInterval(fetchData, 15000); // Refresh every 15s
         return () => clearInterval(interval);
     }, []);
 
-    const getRouteColor = (routeID) => {
-        // Find trucks on this route
-        const trucksOnRoute = trucks.filter(t => t.routeID === routeID).map(t => t.truckID);
+    // Get assigned parcels for a truck
+    const getAssignedParcels = (truckID) => parcels.filter(p => p.assignedTruckId === truckID);
 
-        // Check if any critical alert (SL-1) is associated with these trucks
-        const hasCriticalAlert = alerts.some(a =>
-            a.severity === 'SL-1' &&
-            (a.truckID && trucksOnRoute.includes(a.truckID))
-        );
+    // Get trucks on a route
+    const getTrucksOnRoute = (routeID) => trucks.filter(t => t.routeID === routeID);
 
-        return hasCriticalAlert ? '#FF0000' : '#0000FF';
+    // Calculate truck load
+    const getTruckLoad = (truckID) => {
+        const assigned = getAssignedParcels(truckID);
+        return assigned.reduce((sum, p) => sum + (Number(p.weight) || 0), 0);
     };
 
-    if (loading) return <div style={{ padding: '2rem' }}>Loading Operations Map...</div>;
+    if (loading) {
+        return (
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '80vh' }}>
+                <div style={{ textAlign: 'center' }}>
+                    <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>🗺️</div>
+                    <p style={{ color: 'var(--text-secondary)' }}>Loading Operations Map...</p>
+                </div>
+            </div>
+        );
+    }
 
     return (
-        <div style={{ width: '100%', height: 'calc(100vh - 64px)', position: 'relative' }}>
-            {error && (
-                <div style={{
-                    position: 'absolute',
-                    top: '10px',
-                    left: '50%',
-                    transform: 'translateX(-50%)',
-                    backgroundColor: '#dc3545',
-                    color: 'white',
-                    padding: '0.5rem 1rem',
-                    borderRadius: '4px',
-                    zIndex: 1000,
-                    boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
-                }}>
-                    ⚠️ {error} - Showing cached or empty view
-                </div>
-            )}
-            <MapContainer zoom={4}>
-                {/* 1. Render Routes as Polylines */}
-                {routes.map(r => {
-                    if (!r || !r.stops) return null;
-
-                    // Normalize stops: Handle both Array and String formats
-                    let stopList = [];
-                    if (Array.isArray(r.stops)) {
-                        stopList = r.stops;
-                    } else if (typeof r.stops === 'string') {
-                        stopList = r.stops.split(',');
-                    }
-
-                    const stops = stopList.map(s => getCoordinates(s));
-                    const path = stops.filter(Boolean);
-
-                    if (path.length < 2) return null;
-
-                    return (
-                        <Polyline
-                            key={r.routeID}
-                            path={path}
-                            options={{
-                                strokeColor: getRouteColor(r.routeID),
-                                strokeOpacity: 0.8,
-                                strokeWeight: 4,
-                                clickable: true
-                            }}
-                        />
-                    );
-                })}
-
-                {/* 2. Render Trucks as Markers */}
-                {trucks.map(t => {
-                    // Logic: Place truck at the coordinates of the first stop
-                    const route = routes.find(r => r.routeID === t.routeID);
-                    if (!route || !route.stops) return null;
-
-                    // Normalize stops for truck positioning too
-                    let stopList = [];
-                    if (Array.isArray(route.stops)) {
-                        stopList = route.stops;
-                    } else if (typeof route.stops === 'string') {
-                        stopList = route.stops.split(',');
-                    }
-
-                    if (stopList.length === 0) return null;
-
-                    const firstStopName = stopList[0];
-                    const position = getCoordinates(firstStopName);
-
-                    if (!position) return null;
-
-                    // Check for critical alerts (SL-1)
-                    const hasCriticalAlert = alerts.some(a =>
-                        a.severity === 'SL-1' && a.truckID === t.truckID
-                    );
-
-                    // Marker Color: Red for Alert, Green for Normal
-                    const markerUrl = hasCriticalAlert
-                        ? "http://maps.google.com/mapfiles/ms/icons/red-dot.png"
-                        : "http://maps.google.com/mapfiles/ms/icons/green-dot.png";
-
-                    // Offset to avoid full overlap
-                    const offsetLat = (Math.random() - 0.5) * 0.1;
-                    const offsetLng = (Math.random() - 0.5) * 0.1;
-
-                    return (
-                        <Marker
-                            key={t.truckID}
-                            position={{ lat: position.lat + offsetLat, lng: position.lng + offsetLng }}
-                            icon={{
-                                url: markerUrl
-                            }}
-                            label={{
-                                text: t.truckID,
-                                color: 'black',
-                                fontWeight: 'bold',
-                                fontSize: '12px',
-                                className: 'map-marker-label'
-                            }}
-                            title={`Truck: ${t.truckID} | Route: ${t.routeID}${hasCriticalAlert ? ' (ALERT)' : ''}`}
-                        />
-                    );
-                })}
-            </MapContainer>
-
-            {/* Map Legend Overlay */}
+        <div style={{ display: 'flex', height: 'calc(100vh - 140px)', gap: '1rem' }}>
+            {/* LEFT PANEL - Route & Truck Info */}
             <div style={{
-                position: 'absolute',
-                bottom: '30px',
-                left: '30px',
-                backgroundColor: 'white',
-                padding: '1rem',
-                borderRadius: '8px',
-                boxShadow: '0 2px 6px rgba(0,0,0,0.3)',
-                zIndex: 10,
-                minWidth: '200px',
-                fontSize: '0.9rem'
+                width: '320px',
+                flexShrink: 0,
+                backgroundColor: 'var(--bg-card)',
+                borderRadius: 'var(--radius)',
+                boxShadow: 'var(--shadow-sm)',
+                overflow: 'hidden',
+                display: 'flex',
+                flexDirection: 'column'
             }}>
-                <h4 style={{ margin: '0 0 10px 0', borderBottom: '1px solid #eee', paddingBottom: '5px', fontSize: '1rem' }}>Operation Status</h4>
+                <div style={{
+                    padding: '1rem',
+                    borderBottom: '1px solid var(--border-color)',
+                    backgroundColor: 'var(--bg-secondary)'
+                }}>
+                    <h3 style={{ margin: 0, fontSize: '1.1rem' }}>📍 Active Routes</h3>
+                    <p style={{ margin: '0.25rem 0 0 0', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
+                        {routes.length} routes • {trucks.length} trucks • {parcels.filter(p => p.assignedTruckId).length} assigned parcels
+                    </p>
+                </div>
 
-                <div style={{ display: 'flex', alignItems: 'center', marginBottom: '8px' }}>
-                    <div style={{ width: '20px', height: '4px', backgroundColor: '#0000FF', marginRight: '10px' }}></div>
-                    <span>Route OK</span>
-                </div>
-                <div style={{ display: 'flex', alignItems: 'center', marginBottom: '8px' }}>
-                    <div style={{ width: '20px', height: '4px', backgroundColor: '#FF0000', marginRight: '10px' }}></div>
-                    <span>Route Alert (SL-1)</span>
-                </div>
+                <div style={{ flex: 1, overflow: 'auto', padding: '0.5rem' }}>
+                    {routes.length === 0 ? (
+                        <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-secondary)' }}>
+                            <div style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>📭</div>
+                            <p>No routes configured</p>
+                            <p style={{ fontSize: '0.85rem' }}>Add routes to see them on the map</p>
+                        </div>
+                    ) : (
+                        routes.map((route, idx) => {
+                            const color = ROUTE_COLORS[idx % ROUTE_COLORS.length];
+                            const trucksOnRoute = getTrucksOnRoute(route.routeID);
+                            const isSelected = selectedRoute === route.routeID;
 
-                <div style={{ display: 'flex', alignItems: 'center', marginBottom: '8px' }}>
-                    <img src="http://maps.google.com/mapfiles/ms/icons/green-dot.png" alt="OK" style={{ width: '20px', marginRight: '10px' }} />
-                    <span>Truck OK</span>
+                            return (
+                                <div
+                                    key={route.routeID}
+                                    onClick={() => setSelectedRoute(isSelected ? null : route.routeID)}
+                                    style={{
+                                        padding: '0.75rem',
+                                        marginBottom: '0.5rem',
+                                        borderRadius: '8px',
+                                        backgroundColor: isSelected ? 'rgba(59,130,246,0.1)' : 'transparent',
+                                        border: `2px solid ${isSelected ? color : 'transparent'}`,
+                                        cursor: 'pointer',
+                                        transition: 'all 0.2s'
+                                    }}
+                                >
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                        <div style={{
+                                            width: '12px',
+                                            height: '12px',
+                                            borderRadius: '50%',
+                                            backgroundColor: color
+                                        }}></div>
+                                        <strong>{route.routeID}</strong>
+                                        <span style={{
+                                            marginLeft: 'auto',
+                                            fontSize: '0.75rem',
+                                            backgroundColor: 'var(--bg-secondary)',
+                                            padding: '2px 8px',
+                                            borderRadius: '12px'
+                                        }}>
+                                            {trucksOnRoute.length} 🚚
+                                        </span>
+                                    </div>
+                                    <div style={{
+                                        fontSize: '0.85rem',
+                                        color: 'var(--text-secondary)',
+                                        marginTop: '0.25rem',
+                                        paddingLeft: '20px'
+                                    }}>
+                                        {Array.isArray(route.stops) ? route.stops.join(' → ') : route.stops}
+                                    </div>
+
+                                    {/* Trucks Dropdown */}
+                                    {isSelected && trucksOnRoute.length > 0 && (
+                                        <div style={{
+                                            marginTop: '0.75rem',
+                                            paddingTop: '0.5rem',
+                                            borderTop: '1px dashed var(--border-color)'
+                                        }}>
+                                            {trucksOnRoute.map(truck => {
+                                                const load = getTruckLoad(truck.truckID);
+                                                const assignedParcels = getAssignedParcels(truck.truckID);
+                                                const utilization = (load / truck.maxCapacity) * 100;
+
+                                                return (
+                                                    <div key={truck.truckID} style={{
+                                                        padding: '0.5rem',
+                                                        marginBottom: '0.25rem',
+                                                        backgroundColor: 'var(--bg-secondary)',
+                                                        borderRadius: '6px'
+                                                    }}>
+                                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                                            <span>🚚 <strong>{truck.truckID}</strong></span>
+                                                            <span style={{
+                                                                fontSize: '0.75rem',
+                                                                color: utilization > 80 ? '#ef4444' : '#10b981'
+                                                            }}>
+                                                                {load}/{truck.maxCapacity} kg
+                                                            </span>
+                                                        </div>
+                                                        {/* Capacity Bar */}
+                                                        <div style={{
+                                                            height: '4px',
+                                                            backgroundColor: '#e5e7eb',
+                                                            borderRadius: '2px',
+                                                            marginTop: '4px',
+                                                            overflow: 'hidden'
+                                                        }}>
+                                                            <div style={{
+                                                                width: `${Math.min(utilization, 100)}%`,
+                                                                height: '100%',
+                                                                backgroundColor: utilization > 80 ? '#ef4444' : '#10b981',
+                                                                transition: 'width 0.3s'
+                                                            }}></div>
+                                                        </div>
+                                                        {/* Parcels */}
+                                                        {assignedParcels.length > 0 && (
+                                                            <div style={{
+                                                                fontSize: '0.75rem',
+                                                                color: 'var(--text-secondary)',
+                                                                marginTop: '4px'
+                                                            }}>
+                                                                📦 {assignedParcels.map(p => p.parcelID).join(', ')}
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                    )}
+                                </div>
+                            );
+                        })
+                    )}
                 </div>
-                <div style={{ display: 'flex', alignItems: 'center' }}>
-                    <img src="http://maps.google.com/mapfiles/ms/icons/red-dot.png" alt="Alert" style={{ width: '20px', marginRight: '10px' }} />
-                    <span>Truck Alert</span>
-                </div>
+            </div>
+
+            {/* RIGHT PANEL - Leaflet Map */}
+            <div style={{
+                flex: 1,
+                borderRadius: 'var(--radius)',
+                overflow: 'hidden',
+                boxShadow: 'var(--shadow-sm)'
+            }}>
+                <MapContainer
+                    center={[20.5, 78.9]}
+                    zoom={5}
+                    style={{ width: '100%', height: '100%' }}
+                    scrollWheelZoom={true}
+                >
+                    <TileLayer
+                        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+                        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                    />
+
+                    {/* Render Routes as Polylines */}
+                    {routes.map((route, idx) => {
+                        const color = ROUTE_COLORS[idx % ROUTE_COLORS.length];
+                        const stops = Array.isArray(route.stops)
+                            ? route.stops
+                            : (route.stops || '').split(',').map(s => s.trim());
+
+                        const positions = stops.map(s => getCoords(s)).filter(Boolean);
+                        if (positions.length < 2) return null;
+
+                        const isSelected = selectedRoute === route.routeID;
+
+                        return (
+                            <React.Fragment key={route.routeID}>
+                                <Polyline
+                                    positions={positions}
+                                    pathOptions={{
+                                        color: color,
+                                        weight: isSelected ? 6 : 4,
+                                        opacity: isSelected ? 1 : 0.7,
+                                        dashArray: isSelected ? '' : ''
+                                    }}
+                                    eventHandlers={{
+                                        click: () => setSelectedRoute(route.routeID)
+                                    }}
+                                />
+                                {/* Stop Markers */}
+                                {positions.map((pos, i) => (
+                                    <CircleMarker
+                                        key={`${route.routeID}-stop-${i}`}
+                                        center={pos}
+                                        radius={8}
+                                        pathOptions={{
+                                            fillColor: color,
+                                            fillOpacity: 1,
+                                            color: 'white',
+                                            weight: 2
+                                        }}
+                                    >
+                                        <Popup>
+                                            <strong>{stops[i]}</strong><br />
+                                            Route: {route.routeID}
+                                        </Popup>
+                                    </CircleMarker>
+                                ))}
+                            </React.Fragment>
+                        );
+                    })}
+
+                    {/* Truck Markers */}
+                    {trucks.map(truck => {
+                        const route = routes.find(r => r.routeID === truck.routeID);
+                        if (!route) return null;
+
+                        const stops = Array.isArray(route.stops)
+                            ? route.stops
+                            : (route.stops || '').split(',').map(s => s.trim());
+
+                        if (stops.length === 0) return null;
+
+                        const pos = getCoords(stops[0]);
+                        if (!pos) return null;
+
+                        // Offset to prevent overlap
+                        const offset = [
+                            (Math.random() - 0.5) * 0.2,
+                            (Math.random() - 0.5) * 0.2
+                        ];
+
+                        const load = getTruckLoad(truck.truckID);
+                        const assignedParcels = getAssignedParcels(truck.truckID);
+
+                        const truckIcon = L.divIcon({
+                            className: 'truck-marker',
+                            html: `<div style="
+                                background: #3b82f6;
+                                color: white;
+                                padding: 4px 8px;
+                                border-radius: 4px;
+                                font-size: 11px;
+                                font-weight: bold;
+                                white-space: nowrap;
+                                box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+                            ">🚚 ${truck.truckID}</div>`,
+                            iconSize: [80, 24],
+                            iconAnchor: [40, 12]
+                        });
+
+                        return (
+                            <Marker
+                                key={truck.truckID}
+                                position={[pos[0] + offset[0], pos[1] + offset[1]]}
+                                icon={truckIcon}
+                            >
+                                <Popup>
+                                    <div style={{ minWidth: '150px' }}>
+                                        <strong>🚚 {truck.truckID}</strong>
+                                        <hr style={{ margin: '0.5rem 0' }} />
+                                        <div>Route: {truck.routeID}</div>
+                                        <div>Load: {load}/{truck.maxCapacity} kg</div>
+                                        {assignedParcels.length > 0 && (
+                                            <div style={{ marginTop: '0.5rem' }}>
+                                                <strong>Parcels:</strong>
+                                                <ul style={{ margin: '0.25rem 0 0 0', paddingLeft: '1rem' }}>
+                                                    {assignedParcels.map(p => (
+                                                        <li key={p.parcelID}>{p.parcelID} → {p.destination} ({p.weight}kg)</li>
+                                                    ))}
+                                                </ul>
+                                            </div>
+                                        )}
+                                    </div>
+                                </Popup>
+                            </Marker>
+                        );
+                    })}
+                </MapContainer>
             </div>
         </div>
     );

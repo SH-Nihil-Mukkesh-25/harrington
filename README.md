@@ -1,6 +1,6 @@
-# TMMR (Transport Misroute Monitoring & Resolution)
+# TMMR (Transport Misroute Monitoring &amp; Resolution)
 
-**Deployment Status**: [![Docker](https://img.shields.io/badge/Docker-Enabled-blue.svg)](https://www.docker.com/) [![Build](https://img.shields.io/badge/Build-Passing-brightgreen.svg)]()
+**Deployment Status**: [![Docker](https://img.shields.io/badge/Docker-Enabled-blue.svg)](https://www.docker.com/) [![Build](https://img.shields.io/badge/Build-Passing-brightgreen.svg)]() [![AI](https://img.shields.io/badge/AI-Gemini%202.0-purple.svg)]()
 
 > A full-stack LogiTech observability platform for intelligent parcel assignment, validation, and misroute prevention.
 
@@ -26,62 +26,68 @@ TMMR provides a centralized Mission Control dashboard for logistics operations t
 2. **Operational Observability**:
    - **Alert System**: Captures failed assignments as "Alerts" (SL-1 to SL-3) for review.
    - **Incident Summary**: Aggregates failure patterns (e.g., "3 failures in 10 mins") to detect systemic issues.
-3. **Voice-Activated Ops (AI)**:
-   - Hands-free "Zudu" assistant allows warehouse operators to query system status and get verbal reports while working.
+3. **AI-Powered Voice Assistant (Gemini 2.0)**:
+   - Natural language processing for operations management
+   - Full CRUD capabilities via voice/chat commands
+   - Hands-free warehouse operations
 
 ---
 
-## � High-Level Architecture
+## 🆕 New Features (v2.5)
 
-The system is architected for reliability and ease of deployment:
+### 🗺️ Interactive Operations Map (Leaflet)
+- **OpenStreetMap Integration**: Free, no API key required
+- **Colored Route Polylines**: Each route displayed with unique colors
+- **Stop Markers**: Circular markers at each city/stop
+- **Truck Markers**: Real-time truck positions with load info
+- **Side Panel**: Route details, truck assignments, parcel counts
+
+### 🤖 Advanced AI Agent (Gemini 2.0 Flash)
+The "Zudu" assistant now supports **full CRUD operations**:
+
+| Category | Commands |
+|----------|----------|
+| **Query** | "What's the system status?", "List all trucks", "Show parcels" |
+| **Create** | "Create a parcel P-001 going to Chennai, 15kg" |
+| **Assign** | "Assign parcel P-001 to truck T-101" |
+| **Alerts** | "Any critical alerts?" |
+
+**Features**:
+- Natural language understanding
+- Automatic tool execution
+- Fallback to basic mode on AI unavailable
+- Processing indicators
+
+### 🚀 One-Click Demo Data Loader
+- Floating rocket button (🚀) in bottom-left corner
+- Loads test data: 3 Routes, 4 Trucks, 4 Parcels
+- Modal confirmation with loading states
+- Auto-refresh after loading
+
+---
+
+## 🏗️ High-Level Architecture
 
 ```mermaid
 graph TD
     User[Logistics Manager] -->|HTTP/Voice| Frontend(React + Vite)
     Frontend -->|REST API| Backend(Node.js + Express)
     Backend -->|Logic| Validator[Validation Engine]
+    Backend -->|AI| Gemini[Gemini 2.0 Flash]
     Backend -->|Data| Store[(In-Memory Store)]
     Validator -->|Success| Store
     Validator -->|Fail| Alerts[Alert System]
 ```
 
-- **Frontend**: Single Page Application (SPA) built with React and Vite. Optimized for performance.
-- **Backend**: Robust Node.js API server handling business logic, validation, and data persistence.
-- **Data Store**: High-performance in-memory structure (simulating a fast caching layer).
+- **Frontend**: React SPA with Vite, Leaflet maps, voice integration
+- **Backend**: Node.js API with Express, Gemini AI SDK
+- **Data Store**: High-performance in-memory structure
 
 ---
 
 ## 🐳 Docker Implementation (Production Ready)
 
-TMMR is fully containerized using **Docker** and **Docker Compose**, ensuring a consistent environment from development to production.
-
-### Why Docker?
-- **Isolation**: Frontend and Backend run in separate, clean containers.
-- **Networking**: Containers communicate over a private Docker implementation network.
-- **Simplicity**: One command to launch the entire stack.
-
-### Docker Configuration
-- **Backend (`/backend/Dockerfile`)**:
-  - Base Image: `node:18-alpine` (Lightweight)
-  - Exposes: Port `5000`
-- **Frontend (`/frontend/Dockerfile`)**:
-  - Base Image: `node:18-alpine`
-  - Build Step: Compiles React to static assets (`npm run build`)
-  - Server: Uses `serve` (or Nginx ready) to host static files on Port `3000`
-- **Orchestration (`docker-compose.yml`)**:
-  - Manages service dependencies (Frontend depends on Backend).
-  - Configures environment variables (`VITE_API_BASE_URL`) dynamically.
-
----
-
-## 🚀 Installation & Running
-
-### Prerequisites
-- Docker Desktop installed and running.
-
-### Quick Start (Recommended)
-Passively deploy the entire system with a single command:
-
+### Quick Start
 ```bash
 # 1. Clone the repository
 git clone https://github.com/SH-Nihil-Mukkesh-25/tmmr-b2b.git
@@ -91,71 +97,113 @@ cd tmmr-b2b
 docker-compose up --build
 ```
 
-**That's it!** The system is now live.
-
 ### Access Points
 - **🖥️ Dashboard**: [http://localhost:3000](http://localhost:3000)
 - **🔌 API Health**: [http://localhost:5000/api/health](http://localhost:5000/api/health)
+- **🤖 AI Status**: [http://localhost:5000/api/ai/status](http://localhost:5000/api/ai/status)
 
-*(To stop the system, press `Ctrl+C` or run `docker-compose down`)*
+---
+
+## 🔧 Environment Setup
+
+### Backend (.env)
+```env
+GEMINI_API_KEY=your_gemini_api_key_here
+PORT=5000
+```
+
+### Frontend (.env)
+```env
+VITE_API_BASE_URL=http://localhost:5000/api
+```
 
 ---
 
 ## 🤖 Voice Assistant Feature ("Zudu")
 
-TMMR includes an experimental **Voice Assistant** to demonstrate hands-free warehouse operations.
+### Basic Mode (No API Key)
+- Static command recognition
+- Commands: "system status", "alerts", "assign parcel X to truck Y"
 
-### How it Works
-1. Navigate to the **"Assistant"** tab in the dashboard.
-2. Click **"Start Listening"**.
-3. **Speak a command**:
-   - *"Report status"* -> Reads out the number of trucks, routes, and active alerts.
-   - *"Check alerts"* -> Summarizes critical alerts.
-4. **Behind the Scenes**:
-   - Uses the browser's **Web Speech API** for speech-to-text.
-   - Parses intent and executes **Tool Calls** effectively triggering backend API requests.
-   - Uses **Speech Synthesis** to read the response back to the user.
+### Advanced AI Mode (With Gemini)
+1. Navigate to **"Assistant"** tab
+2. Enable **"Advanced AI Mode (Gemini)"** toggle
+3. Speak or type naturally:
+   - *"Create a parcel with ID P-100 going to Salem, 20kg"*
+   - *"What trucks are available?"*
+   - *"Assign parcel P-100 to truck T-102"*
 
 ---
 
 ## ✨ Full Feature List
 
-### 1. Dashboard & Monitoring
-- Real-time counters for Routes, Trucks, Parcels, and Alerts.
-- System Status Indicator (Green/Red based on Alerts).
-- **Dark Mode**: Fully supported theme toggle for low-light warehouse environments.
+### 1. Dashboard &amp; Monitoring
+- Real-time counters for Routes, Trucks, Parcels, and Alerts
+- System Status Indicator (Green/Red based on Alerts)
+- **Dark Mode**: Fully supported theme toggle
 
 ### 2. Asset Management (CRUD)
-- **Routes**: Create/Delete routes with specific stops and capacity limits.
-- **Trucks**: Manage fleet, assign to routes, set max capacity.
-- **Parcels**: Inventory of parcels with weight and destination.
-- *Note: Delete operations are strictly validated (e.g., cannot delete a truck if it has parcels).*
+- **Routes**: Create/Delete routes with specific stops
+- **Trucks**: Manage fleet, assign to routes, set max capacity
+- **Parcels**: Inventory of parcels with weight and destination
+- **Inline Delete**: Quick delete buttons on each item
 
-### 3. Assignment & Validation
-- **Smart Assignment Interface**: Dropdown selection for Parcel -> Truck.
-- **Instant Feedback**: Success message or specific error reason (e.g., "Route Mismatch").
+### 3. Operations Map
+- **Leaflet + OpenStreetMap**: Interactive map visualization
+- **Route Lines**: Color-coded polylines for each route
+- **Truck Markers**: Real-time positions with popup details
+- **Side Panel**: Route selection, truck info, load percentages
 
-### 4. Observability Module (New v2.0)
-- **Ops Summary**: View aggregated failure reasons and time-windowed incident candidates.
-- **Workflows**: Inspect step-by-step execution logs of every assignment attempt.
+### 4. Assignment &amp; Validation
+- **Smart Assignment Interface**: Dropdown selection for Parcel → Truck
+- **Instant Validation**: Route match + capacity check
+- **Feedback**: Success message or specific error reason
+
+### 5. Observability Module
+- **Ops Summary**: Aggregated failure reasons
+- **Workflows**: Step-by-step execution logs of assignments
 
 ---
 
-## � Tech Stack
+## 🛠️ Tech Stack
+
 | Component | Technology |
 | :--- | :--- |
-| **Frontend** | React, Vite, CSS Modules |
-| **Backend** | Node.js, Express.js |
-| **API** | RESTful JSON API |
+| **Frontend** | React 19, Vite, Leaflet, CSS |
+| **Backend** | Node.js, Express.js, Helmet, Morgan |
+| **AI** | Google Gemini 2.0 Flash |
+| **Maps** | Leaflet + OpenStreetMap |
 | **Deployment** | Docker, Docker Compose |
-| **AI/Voice** | Web Speech API |
+| **Voice** | Web Speech API |
 
 ---
 
-## ⚠️ Assumptions & Limitations
-- **Data Persistence**: Data is stored **in-memory**. All data resets when the Docker containers are restarted. This is by design for a clean demo environment.
-- **Authentication**: No login is required (Open Access) to facilitate easy evaluation by judges.
+## 📁 Project Structure
+
+```
+tmmr-b2b/
+├── backend/
+│   ├── routes/api.js          # All API endpoints + AI agent
+│   ├── data/store.js          # In-memory data store
+│   ├── server.js              # Express server
+│   └── .env                   # Environment variables
+├── frontend/
+│   ├── src/
+│   │   ├── components/        # Reusable components
+│   │   ├── pages/             # Page components
+│   │   └── api/config.js      # API configuration
+│   └── .env                   # Frontend environment
+├── docker-compose.yml
+└── README.md
+```
 
 ---
 
-*Built for the TMMR Hackathon submission.*
+## ⚠️ Assumptions &amp; Limitations
+- **Data Persistence**: Data is stored **in-memory**. All data resets when containers restart.
+- **Authentication**: No login required for easy hackathon evaluation.
+- **AI Quota**: Gemini API has usage limits; fallback to basic mode if exceeded.
+
+---
+
+*Built for the TMMR Hackathon Challenge | Powered by Google Gemini 2.0*

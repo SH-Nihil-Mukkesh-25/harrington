@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react';
 import { NavLink, Outlet } from 'react-router-dom';
+import axios from 'axios';
+import { API_BASE_URL } from '../api/config';
 
 const Layout = () => {
     const [darkMode, setDarkMode] = useState(() => {
@@ -53,6 +55,24 @@ const Layout = () => {
         paddingBottom: '4px',
         transition: 'all 0.2s ease'
     });
+
+    const [showSeedModal, setShowSeedModal] = useState(false);
+    const [seedingStatus, setSeedingStatus] = useState('idle'); // idle, loading, success, error
+
+    const handleSeedConfirm = async () => {
+        setSeedingStatus('loading');
+        try {
+            await axios.post(`${API_BASE_URL}/seed`);
+            setSeedingStatus('success');
+            setTimeout(() => {
+                window.location.reload();
+            }, 1000);
+        } catch (err) {
+            console.error(err);
+            setSeedingStatus('error');
+            setTimeout(() => setSeedingStatus('idle'), 3000);
+        }
+    };
 
     return (
         <div>
@@ -109,6 +129,148 @@ const Layout = () => {
             <main style={{ padding: '0 2rem' }}>
                 <Outlet />
             </main>
+
+            {/* HACKATHON DEMO BUTTON */}
+            <button
+                onClick={() => setShowSeedModal(true)}
+                title="Load Demo Data (One-Click)"
+                style={{
+                    position: 'fixed',
+                    bottom: '20px',
+                    left: '20px',
+                    zIndex: 9991, // Behind modal
+                    width: '60px',
+                    height: '60px',
+                    borderRadius: '50%',
+                    backgroundColor: '#28a745',
+                    color: 'white',
+                    border: '4px solid white',
+                    boxShadow: '0 4px 10px rgba(0,0,0,0.3)',
+                    fontSize: '2rem',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    transition: 'transform 0.2s'
+                }}
+                onMouseOver={(e) => e.currentTarget.style.transform = 'scale(1.1)'}
+                onMouseOut={(e) => e.currentTarget.style.transform = 'scale(1)'}
+            >
+                🚀
+            </button>
+
+            {/* SEED CONFIRMATION MODAL */}
+            {showSeedModal && (
+                <div style={{
+                    position: 'fixed',
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    backgroundColor: 'rgba(0,0,0,0.5)',
+                    zIndex: 9999,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center'
+                }}>
+                    <div className="card" style={{
+                        width: '400px',
+                        padding: '2rem',
+                        textAlign: 'center',
+                        position: 'relative'
+                    }}>
+                        <h2 style={{ marginTop: 0 }}>⚠️ Load Demo Data?</h2>
+
+                        {seedingStatus === 'idle' && (
+                            <>
+                                <p style={{ color: 'var(--text-secondary)', marginBottom: '2rem' }}>
+                                    This will <strong>DELETE all current routes, trucks, and parcels</strong> and load a fresh test set for the demo.
+                                    <br /><br />
+                                    Are you sure?
+                                </p>
+                                <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center' }}>
+                                    <button
+                                        onClick={() => setShowSeedModal(false)}
+                                        style={{
+                                            padding: '0.75rem 1.5rem',
+                                            borderRadius: 'var(--radius)',
+                                            border: '1px solid var(--border-color)',
+                                            backgroundColor: 'transparent',
+                                            color: 'var(--text-primary)',
+                                            cursor: 'pointer'
+                                        }}
+                                    >
+                                        Cancel
+                                    </button>
+                                    <button
+                                        onClick={handleSeedConfirm}
+                                        style={{
+                                            padding: '0.75rem 1.5rem',
+                                            borderRadius: 'var(--radius)',
+                                            border: 'none',
+                                            backgroundColor: '#28a745',
+                                            color: 'white',
+                                            fontWeight: 'bold',
+                                            cursor: 'pointer'
+                                        }}
+                                    >
+                                        🚀 Yes, Load Data
+                                    </button>
+                                </div>
+                            </>
+                        )}
+
+                        {seedingStatus === 'loading' && (
+                            <div style={{ padding: '2rem 0' }}>
+                                <div className="spinner" style={{
+                                    border: '4px solid rgba(0,0,0,0.1)',
+                                    width: '36px',
+                                    height: '36px',
+                                    borderRadius: '50%',
+                                    borderLeftColor: '#007bff',
+                                    animation: 'spin 1s linear infinite',
+                                    margin: '0 auto 1rem auto'
+                                }}></div>
+                                <p>Resetting System & Loading Data...</p>
+                            </div>
+                        )}
+
+                        {seedingStatus === 'success' && (
+                            <div style={{ padding: '2rem 0', color: '#28a745' }}>
+                                <h3 style={{ margin: 0 }}>✅ Done!</h3>
+                                <p>Refreshing page...</p>
+                            </div>
+                        )}
+
+                        {seedingStatus === 'error' && (
+                            <div style={{ padding: '1rem 0', color: '#dc3545' }}>
+                                <h3>❌ Failed</h3>
+                                <p>Could not load demo data. Make sure backend is running.</p>
+                                <button
+                                    onClick={() => setSeedingStatus('idle')}
+                                    style={{
+                                        marginTop: '1rem',
+                                        padding: '0.5rem 1rem',
+                                        background: '#eee',
+                                        border: 'none',
+                                        borderRadius: '4px',
+                                        cursor: 'pointer'
+                                    }}
+                                >
+                                    Try Again
+                                </button>
+                            </div>
+                        )}
+                    </div>
+                </div>
+            )}
+
+            <style>{`
+                @keyframes spin {
+                    0% { transform: rotate(0deg); }
+                    100% { transform: rotate(360deg); }
+                }
+            `}</style>
         </div>
     );
 };
