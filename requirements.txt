@@ -1,0 +1,21 @@
+# TMMR B2B Project Dependencies
+
+# This project uses Node.js.
+# Install dependencies using `npm install` in the respective directories.
+
+# --- Global / System ---
+Node.js (v16 or higher)
+npm
+
+# --- Backend (./backend) ---
+express
+cors
+nodemon (for development)
+
+# --- Frontend (./frontend) ---
+react
+react-dom
+react-router-dom
+axios
+vite (tooling)
+eslint (tooling)
