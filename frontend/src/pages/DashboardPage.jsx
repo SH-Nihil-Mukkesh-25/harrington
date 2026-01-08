@@ -69,7 +69,7 @@ const DashboardPage = () => {
         display: 'flex',
         flexWrap: 'wrap',
         justifyContent: 'center',
-        gap: '1rem',
+        gap: '1.5rem',
         padding: '2rem'
     };
 
@@ -77,38 +77,45 @@ const DashboardPage = () => {
         padding: '1rem',
         marginBottom: '1rem',
         borderRadius: '4px',
-        backgroundColor: message?.type === 'success' ? '#d4edda' : '#f8d7da',
-        color: message?.type === 'success' ? '#155724' : '#721c24',
-        border: `1px solid ${message?.type === 'success' ? '#c3e6cb' : '#f5c6cb'}`,
+        backgroundColor: message?.type === 'success' ? 'var(--severity-success-bg, #d4edda)' : 'var(--severity-critical-bg, #f8d7da)',
+        color: message?.type === 'success' ? 'var(--severity-success)' : 'var(--severity-critical)',
+        border: `1px solid ${message?.type === 'success' ? 'var(--severity-success)' : 'var(--severity-critical)'}`,
         textAlign: 'center'
     };
 
     return (
         <div>
-            <h2 style={{ textAlign: 'center' }}>Dashboard</h2>
+            <h2 style={{ textAlign: 'center', marginBottom: '1rem' }}>Dashboard Overview</h2>
 
             {message && <div style={msgStyle}>{message.text}</div>}
 
             <div style={containerStyle}>
-                <div style={cardStyle}>
-                    <h3>Routes</h3>
-                    <p style={{ fontSize: '2rem', fontWeight: 'bold' }}>{stats.routes}</p>
-                    <Link to="/routes">Manage Routes</Link>
+                <div className="card" style={{ minWidth: '220px', textAlign: 'center', borderTop: '4px solid var(--primary-color)' }}>
+                    <h3 style={{ fontSize: '1.2rem', color: 'var(--text-secondary)' }}>Active Routes</h3>
+                    <p style={{ fontSize: '3rem', fontWeight: '800', margin: '0.5rem 0', color: 'var(--primary-color)' }}>{stats.routes}</p>
+                    <Link to="/routes">Manage Routes →</Link>
                 </div>
-                <div style={cardStyle}>
-                    <h3>Trucks</h3>
-                    <p style={{ fontSize: '2rem', fontWeight: 'bold' }}>{stats.trucks}</p>
-                    <Link to="/trucks">Manage Trucks</Link>
+                <div className="card" style={{ minWidth: '220px', textAlign: 'center', borderTop: '4px solid var(--primary-color)' }}>
+                    <h3 style={{ fontSize: '1.2rem', color: 'var(--text-secondary)' }}>Trucks Fleet</h3>
+                    <p style={{ fontSize: '3rem', fontWeight: '800', margin: '0.5rem 0', color: 'var(--primary-color)' }}>{stats.trucks}</p>
+                    <Link to="/trucks">Manage Trucks →</Link>
                 </div>
-                <div style={cardStyle}>
-                    <h3>Parcels</h3>
-                    <p style={{ fontSize: '2rem', fontWeight: 'bold' }}>{stats.parcels}</p>
-                    <Link to="/parcels">Manage Parcels</Link>
+                <div className="card" style={{ minWidth: '220px', textAlign: 'center', borderTop: '4px solid var(--primary-color)' }}>
+                    <h3 style={{ fontSize: '1.2rem', color: 'var(--text-secondary)' }}>Parcel Inventory</h3>
+                    <p style={{ fontSize: '3rem', fontWeight: '800', margin: '0.5rem 0', color: 'var(--primary-color)' }}>{stats.parcels}</p>
+                    <Link to="/parcels">Manage Parcels →</Link>
                 </div>
-                <div style={{ ...cardStyle, border: '1px solid #ffa500' }}>
-                    <h3>System Alerts</h3>
-                    <p style={{ fontSize: '2rem', fontWeight: 'bold', color: stats.alerts > 0 ? 'red' : 'green' }}>{stats.alerts}</p>
-                    <Link to="/alerts">View Alerts</Link>
+                <div className="card" style={{ minWidth: '220px', textAlign: 'center', borderTop: `4px solid ${stats.alerts > 0 ? 'var(--severity-critical)' : 'var(--severity-success)'}` }}>
+                    <h3 style={{ fontSize: '1.2rem', color: 'var(--text-secondary)' }}>System Alerts</h3>
+                    <p style={{
+                        fontSize: '3rem',
+                        fontWeight: '800',
+                        margin: '0.5rem 0',
+                        color: stats.alerts > 0 ? 'var(--severity-critical)' : 'var(--severity-success)'
+                    }}>{stats.alerts}</p>
+                    <Link to="/alerts" style={{ color: stats.alerts > 0 ? 'var(--severity-critical)' : 'inherit', fontWeight: 'bold' }}>
+                        {stats.alerts > 0 ? '⚠️ View Issues' : 'No Issues'}
+                    </Link>
                 </div>
             </div>
 

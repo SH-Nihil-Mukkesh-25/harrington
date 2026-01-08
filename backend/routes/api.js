@@ -1,9 +1,10 @@
 const express = require('express');
 const router = express.Router();
+const crypto = require('crypto');
 const { routes, trucks, parcels, alerts, workflows } = require('../data/store');
 
-// Helper to create simple ID
-const generateID = () => Math.random().toString(36).substr(2, 9);
+// Helper to create robust ID
+const generateID = () => crypto.randomUUID();
 
 const createAlert = (severity, message, parcelID = null, truckID = null) => {
     const alert = {
@@ -18,11 +19,13 @@ const createAlert = (severity, message, parcelID = null, truckID = null) => {
     return alert;
 };
 
+// ... (Health Check omitted, lines 21-24 same)
 // Health Check
 router.get('/health', (req, res) => {
     res.json({ status: 'ok', timestamp: new Date(), message: 'TMMR Backend is healthy' });
 });
 
+// ... (Debug Log omitted, lines 27-31 same)
 // --- Debug Logging ---
 console.log("Loading API Routes...");
 
@@ -30,6 +33,8 @@ router.get('/', (req, res) => {
     res.send('API Root');
 });
 
+
+// ... (reset omitted, lines 34-48 same)
 // --- System Reset (DEV/DEMO ONLY) ---
 router.post('/reset', (req, res) => {
     // Clear all in-memory data
@@ -47,6 +52,7 @@ router.post('/reset', (req, res) => {
     });
 });
 
+
 // --- Alerts API ---
 router.get('/alerts', (req, res) => {
     res.json(alerts);
@@ -54,11 +60,19 @@ router.get('/alerts', (req, res) => {
 
 // --- Routes API ---
 router.get('/routes', (req, res) => {
+    // Pagination support
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 1000; // Default to all
+    const startIndex = (page - 1) * limit;
+    const endIndex = page * limit;
+
+    const result = limit === 1000 ? routes : routes.slice(startIndex, endIndex); // Optimized for default
+
     console.log("GET /routes hit");
-    console.log("Routes data:", routes);
-    res.json(routes);
+    res.json(result);
 });
 
+// ... (POST /routes same)
 router.post('/routes', (req, res) => {
     // Expected: { routeID, stops, capacityLimit }
     const newRoute = req.body;
@@ -76,11 +90,21 @@ router.post('/routes', (req, res) => {
 
     // Enforce string ID
     newRoute.routeID = String(newRoute.routeID).trim();
+
+    // --- FIX: Normalize Stops (Always Array) ---
+    // If string "Mumbai, Pune", split it. If Array, keep it.
+    if (typeof newRoute.stops === 'string') {
+        newRoute.stops = newRoute.stops.split(',').map(s => s.trim()).filter(Boolean);
+    } else if (!Array.isArray(newRoute.stops)) {
+        return res.status(400).json({ error: 'stops must be a comma-separated string or an array of strings' });
+    }
+    // Now newRoute.stops is guaranteed to be an Array
     
     routes.push(newRoute);
     res.status(201).json(newRoute);
 });
 
+// ... (DELETE /routes same)
 router.delete('/routes/:routeID', (req, res) => {
     const { routeID } = req.params;
     const index = routes.findIndex(r => r.routeID === routeID);
@@ -101,11 +125,13 @@ router.delete('/routes/:routeID', (req, res) => {
     res.json({ success: true, message: `Route '${routeID}' deleted successfully` });
 });
 
+
 // --- Trucks API ---
 router.get('/trucks', (req, res) => {
     res.json(trucks);
 });
 
+// ... (POST /trucks same)
 router.post('/trucks', (req, res) => {
     // Expected: { truckID, routeID, maxCapacity }
     const newTruck = req.body;
@@ -128,10 +154,18 @@ router.post('/trucks', (req, res) => {
     newTruck.truckID = String(newTruck.truckID).trim();
     newTruck.routeID = String(newTruck.routeID).trim();
 
+    // --- FIX: Referential Integrity (Does Route Exist?) ---
+    const routeExists = routes.find(r => r.routeID === newTruck.routeID);
+    if (!routeExists) {
+        return res.status(400).json({ error: `Route '${newTruck.routeID}' does not exist` });
+    }
+
     trucks.push(newTruck);
     res.status(201).json(newTruck);
 });
 
+
+// ... (DELETE /trucks same)
 router.delete('/trucks/:truckID', (req, res) => {
     const { truckID } = req.params;
     const index = trucks.findIndex(t => t.truckID === truckID);
@@ -149,12 +183,30 @@ router.delete('/trucks/:truckID', (req, res) => {
     }
     
     trucks.splice(index, 1);
+
+    // --- FIX: Ghost Data Cleanup (Remove Alerts) ---
+    // Remove alerts associated with this truck
+    for (let i = alerts.length - 1; i >= 0; i--) {
+        if (alerts[i].truckID === truckID) {
+            alerts.splice(i, 1);
+        }
+    }
+
     res.json({ success: true, message: `Truck '${truckID}' deleted successfully` });
 });
 
+
 // --- Parcels API ---
 router.get('/parcels', (req, res) => {
-    res.json(parcels);
+    // Pagination support
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 1000;
+    const startIndex = (page - 1) * limit;
+    const endIndex = page * limit;
+
+    const result = limit === 1000 ? parcels : parcels.slice(startIndex, endIndex);
+
+    res.json(result);
 });
 
 router.post('/parcels', (req, res) => {
@@ -199,6 +251,15 @@ router.delete('/parcels/:parcelID', (req, res) => {
     }
     
     parcels.splice(index, 1);
+
+    // --- FIX: Ghost Data Cleanup (Remove Alerts) ---
+    // Remove alerts associated with this parcel
+    for (let i = alerts.length - 1; i >= 0; i--) {
+        if (alerts[i].parcelID === parcelID) {
+            alerts.splice(i, 1);
+        }
+    }
+
     res.json({ success: true, message: `Parcel '${parcelID}' deleted successfully` });
 });
 
