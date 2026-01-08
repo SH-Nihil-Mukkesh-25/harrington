@@ -11,6 +11,7 @@ import AlertsPage from './pages/AlertsPage';
 import VoiceAssistantPage from './pages/VoiceAssistantPage';
 import WorkflowsPage from './pages/WorkflowsPage';
 import OpsSummaryPage from './pages/OpsSummaryPage';
+import OperationsMapPage from './pages/OperationsMapPage';
 import { API_BASE_URL } from './api/config';
 import './App.css';
 
@@ -59,6 +60,7 @@ function App() {
           <Route path="assistant" element={<VoiceAssistantPage />} />
           <Route path="workflows" element={<WorkflowsPage />} />
           <Route path="ops" element={<OpsSummaryPage />} />
+          <Route path="map" element={<OperationsMapPage />} />
         </Route>
       </Routes>
     </BrowserRouter>

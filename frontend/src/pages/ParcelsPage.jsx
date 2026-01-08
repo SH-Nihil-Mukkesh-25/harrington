@@ -11,6 +11,8 @@ const ParcelsPage = () => {
     });
     const [deleteConfirm, setDeleteConfirm] = useState(null);
     const [message, setMessage] = useState(null);
+    const [submitting, setSubmitting] = useState(false);
+    const [loading, setLoading] = useState(true);
 
     useEffect(() => {
         fetchParcels();
@@ -22,6 +24,9 @@ const ParcelsPage = () => {
             setParcels(response.data);
         } catch (error) {
             console.error('Error fetching parcels:', error);
+            showMessage('error', 'Failed to load parcels');
+        } finally {
+            setLoading(false);
         }
     };
 
@@ -36,6 +41,8 @@ const ParcelsPage = () => {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
+        if (submitting) return;
+        setSubmitting(true);
         try {
             const payload = {
                 ...formData,
@@ -48,6 +55,8 @@ const ParcelsPage = () => {
         } catch (error) {
             console.error('Error adding parcel:', error);
             showMessage('error', error.response?.data?.error || 'Failed to add parcel');
+        } finally {
+            setSubmitting(false);
         }
     };
 
@@ -71,6 +80,10 @@ const ParcelsPage = () => {
         color: message?.type === 'success' ? '#155724' : '#721c24',
         border: `1px solid ${message?.type === 'success' ? '#c3e6cb' : '#f5c6cb'}`
     };
+
+    if (loading) {
+        return <div style={{ padding: '2rem', textAlign: 'center' }}>Loading Parcels...</div>;
+    }
 
     return (
         <div>
@@ -104,8 +117,12 @@ const ParcelsPage = () => {
                         onChange={handleChange}
                         required
                     />
-                    <button type="submit" disabled={!formData.parcelID || !formData.destination || !formData.weight || Number(formData.weight) <= 0}>
-                        Add Parcel
+                    <button
+                        type="submit"
+                        disabled={submitting || !formData.parcelID || !formData.destination || !formData.weight || Number(formData.weight) <= 0}
+                        style={{ opacity: submitting ? 0.7 : 1, cursor: submitting ? 'not-allowed' : 'pointer' }}
+                    >
+                        {submitting ? 'Adding...' : 'Add Parcel'}
                     </button>
                 </form>
             </section>

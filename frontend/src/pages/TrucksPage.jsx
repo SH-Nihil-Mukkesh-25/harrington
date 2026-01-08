@@ -11,6 +11,8 @@ const TrucksPage = () => {
     });
     const [deleteConfirm, setDeleteConfirm] = useState(null);
     const [message, setMessage] = useState(null);
+    const [submitting, setSubmitting] = useState(false);
+    const [loading, setLoading] = useState(true);
 
     useEffect(() => {
         fetchTrucks();
@@ -22,6 +24,9 @@ const TrucksPage = () => {
             setTrucks(response.data);
         } catch (error) {
             console.error('Error fetching trucks:', error);
+            showMessage('error', 'Failed to load trucks');
+        } finally {
+            setLoading(false);
         }
     };
 
@@ -36,6 +41,8 @@ const TrucksPage = () => {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
+        if (submitting) return;
+        setSubmitting(true);
         try {
             const payload = {
                 ...formData,
@@ -48,6 +55,8 @@ const TrucksPage = () => {
         } catch (error) {
             console.error('Error adding truck:', error);
             showMessage('error', error.response?.data?.error || 'Failed to add truck');
+        } finally {
+            setSubmitting(false);
         }
     };
 
@@ -71,6 +80,10 @@ const TrucksPage = () => {
         color: message?.type === 'success' ? '#155724' : '#721c24',
         border: `1px solid ${message?.type === 'success' ? '#c3e6cb' : '#f5c6cb'}`
     };
+
+    if (loading) {
+        return <div style={{ padding: '2rem', textAlign: 'center' }}>Loading Trucks...</div>;
+    }
 
     return (
         <div>
@@ -104,8 +117,12 @@ const TrucksPage = () => {
                         onChange={handleChange}
                         required
                     />
-                    <button type="submit" disabled={!formData.truckID || !formData.routeID || !formData.maxCapacity || Number(formData.maxCapacity) <= 0}>
-                        Add Truck
+                    <button
+                        type="submit"
+                        disabled={submitting || !formData.truckID || !formData.routeID || !formData.maxCapacity || Number(formData.maxCapacity) <= 0}
+                        style={{ opacity: submitting ? 0.7 : 1, cursor: submitting ? 'not-allowed' : 'pointer' }}
+                    >
+                        {submitting ? 'Adding...' : 'Add Truck'}
                     </button>
                 </form>
             </section>
