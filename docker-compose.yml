@@ -1,0 +1,26 @@
+# TMMR Docker Compose
+# Full-stack deployment: Backend + Frontend
+
+version: '3.8'
+
+services:
+  backend:
+    build: ./backend
+    container_name: tmmr-backend
+    ports:
+      - "5000:5000"
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        VITE_API_BASE_URL: http://backend:5000/api
+    container_name: tmmr-frontend
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
+    restart: unless-stopped
+    environment:
+      - VITE_API_BASE_URL=http://backend:5000/api
