@@ -8,6 +8,8 @@ const mapData = require('./mapData');
 const { checkAffectedTrucks } = require('./resiliencyEngine');
 const { validateExternalKey, createTender, getReplay } = require('./externalHandler');
 const { parcels } = require('../data/store');
+// VERIFICATION MIDDLEWARE - Enforced at runtime
+const { validateAssignment, validateAdminOperation } = require('../middleware/verificationMiddleware');
 
 // GET /api/v3/audit/optimization-proposals
 router.get('/audit/optimization-proposals', (req, res) => {
@@ -21,13 +23,13 @@ router.get('/audit/optimization-proposals', (req, res) => {
 });
 
 // POST /api/v3/execute-optimization
-router.post('/execute-optimization', async (req, res) => {
+// ENFORCED: validateAssignment middleware runs before execution
+router.post('/execute-optimization', validateAssignment, async (req, res) => {
     // Payload: { assignments: [{ parcelID, truckID, priority }, ...] }
     const { assignments } = req.body;
 
-    if (!assignments || !Array.isArray(assignments) || assignments.length === 0) {
-        return res.status(400).json({ error: "Invalid payload: 'assignments' array is required." });
-    }
+    // Validation already passed via middleware
+    console.log('[VERIFICATION] Assignment validation PASSED for', assignments.length, 'items');
 
     const result = await executeBatch(assignments);
 
@@ -42,7 +44,8 @@ router.post('/execute-optimization', async (req, res) => {
 // --- Phase 4: Resiliency & External APIs ---
 
 // POST /api/v3/admin/road-status (Simulates Road Closure)
-router.post('/admin/road-status', (req, res) => {
+// ENFORCED: validateAdminOperation middleware runs before execution
+router.post('/admin/road-status', validateAdminOperation, (req, res) => {
     const { from, to, isClosed } = req.body;
     try {
         const result = mapData.toggleRoadStatus(from, to, isClosed);

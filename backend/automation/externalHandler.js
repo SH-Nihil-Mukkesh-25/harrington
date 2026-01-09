@@ -4,8 +4,14 @@ const { workflows } = require('../data/store');
 // --- Security Middleware ---
 const validateExternalKey = (req, res, next) => {
     const apiKey = req.headers['x-api-key'];
-    // Hardcoded for V3 demo. In prod, use DB or Vault.
-    const VALID_KEY = "TMMR-PARTNER-8821";
+    
+    // API key from environment (SECURITY: Never hardcode in production)
+    const VALID_KEY = process.env.EXTERNAL_API_KEY || (process.env.NODE_ENV !== 'production' ? 'TMMR-PARTNER-8821' : null);
+    
+    if (!VALID_KEY) {
+        console.error('[SECURITY] EXTERNAL_API_KEY not configured in production!');
+        return res.status(500).json({ error: "Server configuration error" });
+    }
 
     if (!apiKey || apiKey !== VALID_KEY) {
         return res.status(403).json({ error: "Access Denied: Invalid or Missing API Key." });

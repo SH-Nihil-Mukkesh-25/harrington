@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
 import { API_BASE_URL } from '../api/config';
 import { MapContainer, TileLayer, Polyline, Marker, Popup, CircleMarker } from 'react-leaflet';
@@ -13,36 +13,12 @@ L.Icon.Default.mergeOptions({
     shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png',
 });
 
-// City Coordinates (India-focused for demo)
-const CITY_COORDS = {
-    'DELHI': [28.7041, 77.1025],
-    'JAIPUR': [26.9124, 75.7873],
-    'LUCKNOW': [26.8467, 80.9461],
-    'CHENNAI': [13.0827, 80.2707],
-    'BANGALORE': [12.9716, 77.5946],
-    'HYDERABAD': [17.3850, 78.4867],
-    'MUMBAI': [19.0760, 72.8777],
-    'PUNE': [18.5204, 73.8567],
-    'AHMEDABAD': [23.0225, 72.5714],
-    'KOLKATA': [22.5726, 88.3639],
-    // Fallbacks
-    'A': [19.0760, 72.8777],
-    'B': [18.5204, 73.8567],
-    'C': [12.9716, 77.5946],
-};
-
-const getCoords = (city) => {
-    if (!city) return null;
-    const key = city.toString().trim().toUpperCase();
-    if (CITY_COORDS[key]) return CITY_COORDS[key];
-    // Deterministic fallback
-    let hash = 0;
-    for (let i = 0; i < key.length; i++) hash = key.charCodeAt(i) + ((hash << 5) - hash);
-    return [12 + (Math.abs(hash) % 16), 74 + (Math.abs(hash >> 8) % 10)];
-};
+// Local cache for coordinates (persists during session)
+const coordsCache = {};
 
 // Color palette for routes
 const ROUTE_COLORS = ['#10b981', '#3b82f6', '#f59e0b', '#8b5cf6', '#ef4444', '#06b6d4'];
+
 
 const OperationsMapPage = () => {
     const [routes, setRoutes] = useState([]);
@@ -50,6 +26,52 @@ const OperationsMapPage = () => {
     const [parcels, setParcels] = useState([]);
     const [loading, setLoading] = useState(true);
     const [selectedRoute, setSelectedRoute] = useState(null);
+    const [cityCoords, setCityCoords] = useState(coordsCache); // Local state for coordinates
+
+    // Function to get coordinates for a city (uses cache + state)
+    const getCoords = useCallback((city) => {
+        if (!city) return null;
+        const key = city.toString().trim().toUpperCase();
+        if (cityCoords[key]) return [cityCoords[key].lat, cityCoords[key].lng];
+        if (coordsCache[key]) return [coordsCache[key].lat, coordsCache[key].lng];
+        return null; // Return null if not yet geocoded
+    }, [cityCoords]);
+
+    // Fetch coordinates for all cities in routes
+    const fetchCoordinates = useCallback(async (routesList) => {
+        // Extract all unique cities from routes
+        const allCities = new Set();
+        routesList.forEach(route => {
+            const stops = Array.isArray(route.stops)
+                ? route.stops
+                : (route.stops || '').split(',').map(s => s.trim());
+            stops.forEach(city => {
+                const key = city.trim().toUpperCase();
+                if (key && !coordsCache[key]) {
+                    allCities.add(key);
+                }
+            });
+        });
+
+        if (allCities.size === 0) return;
+
+        try {
+            // Use batch geocoding endpoint
+            const response = await axios.post(`${API_BASE_URL}/geocode/batch`, {
+                cities: Array.from(allCities)
+            });
+
+            // Update cache and state
+            const newCoords = { ...coordsCache };
+            Object.entries(response.data).forEach(([city, coords]) => {
+                newCoords[city] = coords;
+                coordsCache[city] = coords; // Update global cache
+            });
+            setCityCoords(newCoords);
+        } catch (err) {
+            console.error('Error fetching coordinates:', err);
+        }
+    }, []);
 
     useEffect(() => {
         const fetchData = async () => {
@@ -62,6 +84,9 @@ const OperationsMapPage = () => {
                 setRoutes(routesRes.data);
                 setTrucks(trucksRes.data);
                 setParcels(parcelsRes.data);
+
+                // Fetch coordinates for all cities in routes
+                await fetchCoordinates(routesRes.data);
             } catch (err) {
                 console.error('Error fetching map data:', err);
             } finally {
@@ -71,7 +96,7 @@ const OperationsMapPage = () => {
         fetchData();
         const interval = setInterval(fetchData, 15000); // Refresh every 15s
         return () => clearInterval(interval);
-    }, []);
+    }, [fetchCoordinates]);
 
     // Get assigned parcels for a truck
     const getAssignedParcels = (truckID) => parcels.filter(p => p.assignedTruckID === truckID);

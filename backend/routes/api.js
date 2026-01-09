@@ -3,6 +3,12 @@ const router = express.Router();
 const crypto = require('crypto');
 const { routes, trucks, parcels, alerts, workflows } = require('../data/store');
 
+// Import batch mutex to prevent race conditions with /assignParcel
+const { isBatchLocked } = require('../automation/batchExecutor');
+
+// Import admin authentication middleware
+const { requireAdminAuth, requireConfirmation } = require('../middleware/adminAuth');
+
 // Helper to create robust ID
 const generateID = () => crypto.randomUUID();
 
@@ -201,9 +207,9 @@ router.get('/', (req, res) => {
 });
 
 
-// ... (reset omitted, lines 34-48 same)
 // --- System Reset (DEV/DEMO ONLY) ---
-router.post('/reset', (req, res) => {
+// PROTECTED: Requires admin key + confirmation
+router.post('/reset', requireAdminAuth, requireConfirmation, (req, res) => {
     // Clear all in-memory data
     routes.length = 0;
     trucks.length = 0;
@@ -211,7 +217,7 @@ router.post('/reset', (req, res) => {
     alerts.length = 0;
     workflows.length = 0;
     
-    console.log('[DEV] System reset executed at', new Date().toISOString());
+    console.log('[ADMIN] System reset executed at', new Date().toISOString());
     res.json({ 
         success: true, 
         message: 'System reset successful',
@@ -315,8 +321,8 @@ router.post('/routes', (req, res) => {
     res.status(201).json(newRoute);
 });
 
-// ... (DELETE /routes same)
-router.delete('/routes/:routeID', (req, res) => {
+// PROTECTED: Requires admin key
+router.delete('/routes/:routeID', requireAdminAuth, (req, res) => {
     const { routeID } = req.params;
     const index = routes.findIndex(r => r.routeID === routeID);
     
@@ -378,8 +384,8 @@ router.post('/trucks', (req, res) => {
 });
 
 
-// ... (DELETE /trucks same)
-router.delete('/trucks/:truckID', (req, res) => {
+// PROTECTED: Requires admin key
+router.delete('/trucks/:truckID', requireAdminAuth, (req, res) => {
     const { truckID } = req.params;
     const index = trucks.findIndex(t => t.truckID === truckID);
     
@@ -450,7 +456,8 @@ router.post('/parcels', (req, res) => {
     res.status(201).json(newParcel);
 });
 
-router.delete('/parcels/:parcelID', (req, res) => {
+// PROTECTED: Requires admin key
+router.delete('/parcels/:parcelID', requireAdminAuth, (req, res) => {
     const { parcelID } = req.params;
     const index = parcels.findIndex(p => p.parcelID === parcelID);
     
@@ -550,7 +557,16 @@ const step5_commitAssignment = (parcel, truck) => {
 };
 
 // Main Endpoint - Orchestrates the workflow with logging
+// RACE CONDITION FIX: Check if batch executor is processing
 router.post('/assignParcel', (req, res) => {
+    // Block single assignments during batch processing to prevent capacity corruption
+    if (isBatchLocked()) {
+        return res.status(409).json({
+            error: 'System Busy: Batch optimization in progress. Please retry in a moment.',
+            code: 409
+        });
+    }
+    
     const { parcelID, truckID } = req.body;
     
     // Generate workflow context
@@ -827,6 +843,240 @@ router.get('/ops/summary', (req, res) => {
         topFailureReasons,
         incidentCandidates
     });
+});
+
+// --- Geocoding API (Gemini-powered) ---
+// In-memory cache for geocoded locations
+const geocodeCache = {};
+
+router.get('/geocode', async (req, res) => {
+    const { city } = req.query;
+    
+    if (!city || typeof city !== 'string' || !city.trim()) {
+        return res.status(400).json({ error: 'City name is required' });
+    }
+    
+    const cityKey = city.trim().toUpperCase();
+    
+    // Check cache first
+    if (geocodeCache[cityKey]) {
+        return res.json({ 
+            city: cityKey, 
+            ...geocodeCache[cityKey],
+            cached: true 
+        });
+    }
+    
+    // Known Indian cities (fallback if Gemini unavailable)
+    const KNOWN_CITIES = {
+        'DELHI': { lat: 28.7041, lng: 77.1025 },
+        'JAIPUR': { lat: 26.9124, lng: 75.7873 },
+        'LUCKNOW': { lat: 26.8467, lng: 80.9461 },
+        'CHENNAI': { lat: 13.0827, lng: 80.2707 },
+        'BANGALORE': { lat: 12.9716, lng: 77.5946 },
+        'BENGALURU': { lat: 12.9716, lng: 77.5946 },
+        'HYDERABAD': { lat: 17.3850, lng: 78.4867 },
+        'MUMBAI': { lat: 19.0760, lng: 72.8777 },
+        'PUNE': { lat: 18.5204, lng: 73.8567 },
+        'AHMEDABAD': { lat: 23.0225, lng: 72.5714 },
+        'KOLKATA': { lat: 22.5726, lng: 88.3639 },
+        'COIMBATORE': { lat: 11.0168, lng: 76.9558 },
+        'SALEM': { lat: 11.6643, lng: 78.1460 },
+        'TRICHY': { lat: 10.7905, lng: 78.7047 },
+        'TIRUCHIRAPPALLI': { lat: 10.7905, lng: 78.7047 },
+        'MADURAI': { lat: 9.9252, lng: 78.1198 },
+        'TIRUNELVELI': { lat: 8.7139, lng: 77.7567 },
+        'ERODE': { lat: 11.3410, lng: 77.7172 },
+        'VELLORE': { lat: 12.9165, lng: 79.1325 },
+        'KOCHI': { lat: 9.9312, lng: 76.2673 },
+        'COCHIN': { lat: 9.9312, lng: 76.2673 },
+        'THIRUVANANTHAPURAM': { lat: 8.5241, lng: 76.9366 },
+        'TRIVANDRUM': { lat: 8.5241, lng: 76.9366 },
+        'VISAKHAPATNAM': { lat: 17.6868, lng: 83.2185 },
+        'VIZAG': { lat: 17.6868, lng: 83.2185 },
+        'INDORE': { lat: 22.7196, lng: 75.8577 },
+        'BHOPAL': { lat: 23.2599, lng: 77.4126 },
+        'NAGPUR': { lat: 21.1458, lng: 79.0882 },
+        'SURAT': { lat: 21.1702, lng: 72.8311 },
+        'VADODARA': { lat: 22.3072, lng: 73.1812 },
+        'RAJKOT': { lat: 22.3039, lng: 70.8022 },
+        'PATNA': { lat: 25.5941, lng: 85.1376 },
+        'RANCHI': { lat: 23.3441, lng: 85.3096 },
+        'GUWAHATI': { lat: 26.1445, lng: 91.7362 },
+        'CHANDIGARH': { lat: 30.7333, lng: 76.7794 },
+        'AMRITSAR': { lat: 31.6340, lng: 74.8723 },
+        'LUDHIANA': { lat: 30.9010, lng: 75.8573 },
+        'AGRA': { lat: 27.1767, lng: 78.0081 },
+        'VARANASI': { lat: 25.3176, lng: 82.9739 },
+        'KANPUR': { lat: 26.4499, lng: 80.3319 },
+        'NOIDA': { lat: 28.5355, lng: 77.3910 },
+        'GURGAON': { lat: 28.4595, lng: 77.0266 },
+        'GURUGRAM': { lat: 28.4595, lng: 77.0266 },
+        'FARIDABAD': { lat: 28.4089, lng: 77.3178 },
+        'GHAZIABAD': { lat: 28.6692, lng: 77.4538 },
+    };
+    
+    // Check known cities
+    if (KNOWN_CITIES[cityKey]) {
+        geocodeCache[cityKey] = KNOWN_CITIES[cityKey];
+        return res.json({ 
+            city: cityKey, 
+            ...KNOWN_CITIES[cityKey],
+            source: 'known_cities' 
+        });
+    }
+    
+    // Use Gemini for unknown cities
+    if (!process.env.GEMINI_API_KEY) {
+        return res.status(503).json({ 
+            error: 'Geocoding service unavailable', 
+            message: 'City not in known list and Gemini API not configured' 
+        });
+    }
+    
+    try {
+        const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+        const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' });
+        
+        const prompt = `Return ONLY the latitude and longitude coordinates for the city "${city}" in India.
+Response format must be exactly: LAT,LNG (just two numbers separated by comma, nothing else)
+Example response: 13.0827,80.2707
+If the city is not in India or doesn't exist, respond with: ERROR`;
+
+        const result = await model.generateContent(prompt);
+        const responseText = result.response.text().trim();
+        
+        if (responseText === 'ERROR' || !responseText.includes(',')) {
+            return res.status(404).json({ 
+                error: 'City not found', 
+                city: cityKey 
+            });
+        }
+        
+        const [lat, lng] = responseText.split(',').map(s => parseFloat(s.trim()));
+        
+        if (isNaN(lat) || isNaN(lng)) {
+            return res.status(500).json({ 
+                error: 'Invalid coordinates received', 
+                raw: responseText 
+            });
+        }
+        
+        // Validate coordinates are roughly in India (lat: 6-36, lng: 68-98)
+        if (lat < 6 || lat > 36 || lng < 68 || lng > 98) {
+            return res.status(400).json({ 
+                error: 'Coordinates outside India', 
+                city: cityKey,
+                lat, lng 
+            });
+        }
+        
+        // Cache and return
+        geocodeCache[cityKey] = { lat, lng };
+        res.json({ 
+            city: cityKey, 
+            lat, 
+            lng,
+            source: 'gemini' 
+        });
+        
+    } catch (err) {
+        console.error('Geocoding error:', err);
+        res.status(500).json({ 
+            error: 'Geocoding failed', 
+            details: err.message 
+        });
+    }
+});
+
+// Batch geocoding endpoint
+router.post('/geocode/batch', async (req, res) => {
+    const { cities } = req.body;
+    
+    if (!cities || !Array.isArray(cities)) {
+        return res.status(400).json({ error: 'cities array is required' });
+    }
+    
+    const results = {};
+    const unknownCities = [];
+    
+    // Known cities lookup
+    const KNOWN_CITIES = {
+        'DELHI': { lat: 28.7041, lng: 77.1025 },
+        'CHENNAI': { lat: 13.0827, lng: 80.2707 },
+        'BANGALORE': { lat: 12.9716, lng: 77.5946 },
+        'BENGALURU': { lat: 12.9716, lng: 77.5946 },
+        'HYDERABAD': { lat: 17.3850, lng: 78.4867 },
+        'MUMBAI': { lat: 19.0760, lng: 72.8777 },
+        'PUNE': { lat: 18.5204, lng: 73.8567 },
+        'KOLKATA': { lat: 22.5726, lng: 88.3639 },
+        'COIMBATORE': { lat: 11.0168, lng: 76.9558 },
+        'SALEM': { lat: 11.6643, lng: 78.1460 },
+        'MADURAI': { lat: 9.9252, lng: 78.1198 },
+        'TRICHY': { lat: 10.7905, lng: 78.7047 },
+        'JAIPUR': { lat: 26.9124, lng: 75.7873 },
+        'LUCKNOW': { lat: 26.8467, lng: 80.9461 },
+        'AHMEDABAD': { lat: 23.0225, lng: 72.5714 },
+        'TIRUNELVELI': { lat: 8.7139, lng: 77.7567 },
+        'ERODE': { lat: 11.3410, lng: 77.7172 },
+        'VELLORE': { lat: 12.9165, lng: 79.1325 },
+    };
+    
+    // First pass: check cache and known cities
+    for (const city of cities) {
+        const key = city.trim().toUpperCase();
+        if (geocodeCache[key]) {
+            results[key] = { ...geocodeCache[key], source: 'cache' };
+        } else if (KNOWN_CITIES[key]) {
+            results[key] = { ...KNOWN_CITIES[key], source: 'known_cities' };
+            geocodeCache[key] = KNOWN_CITIES[key];
+        } else {
+            unknownCities.push(key);
+        }
+    }
+    
+    // Use Gemini for unknown cities (if available)
+    if (unknownCities.length > 0 && process.env.GEMINI_API_KEY) {
+        try {
+            const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+            const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' });
+            
+            const prompt = `Return the latitude and longitude coordinates for these Indian cities: ${unknownCities.join(', ')}
+
+Response format must be exactly (one city per line):
+CITYNAME:LAT,LNG
+
+Example:
+COIMBATORE:11.0168,76.9558
+SALEM:11.6643,78.1460
+
+If a city doesn't exist or is not in India, skip it.`;
+
+            const result = await model.generateContent(prompt);
+            const responseText = result.response.text().trim();
+            
+            // Parse response
+            const lines = responseText.split('\n');
+            for (const line of lines) {
+                const match = line.match(/^([A-Z\s]+):(-?\d+\.?\d*),(-?\d+\.?\d*)$/);
+                if (match) {
+                    const [, cityName, latStr, lngStr] = match;
+                    const key = cityName.trim();
+                    const lat = parseFloat(latStr);
+                    const lng = parseFloat(lngStr);
+                    
+                    if (!isNaN(lat) && !isNaN(lng) && lat >= 6 && lat <= 36 && lng >= 68 && lng <= 98) {
+                        results[key] = { lat, lng, source: 'gemini' };
+                        geocodeCache[key] = { lat, lng };
+                    }
+                }
+            }
+        } catch (err) {
+            console.error('Batch geocoding error:', err);
+        }
+    }
+    
+    res.json(results);
 });
 
 module.exports = router;

@@ -6,6 +6,11 @@ const { parcels, trucks, workflows, alerts } = require('../data/store');
 // preventing other requests from entering the critical section while a batch is processing.
 let isProcessingBatch = false;
 
+// --- Mutex Control Functions (Exported for use in /assignParcel) ---
+const isBatchLocked = () => isProcessingBatch;
+const acquireBatchLock = () => { isProcessingBatch = true; };
+const releaseBatchLock = () => { isProcessingBatch = false; };
+
 // Priority Map for sorting
 const PRIORITY_MAP = {
     'HIGH': 3,
@@ -176,4 +181,4 @@ const executeBatch = async (assignments) => {
     };
 };
 
-module.exports = { executeBatch };
+module.exports = { executeBatch, isBatchLocked, acquireBatchLock, releaseBatchLock };
